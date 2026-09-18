@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+:root { --ink: #193a35; --paper: #f3eee6; --clay: #e9a172; --sage: #d7e1d7; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
+::selection { background: var(--clay); color: var(--ink); }
+.serif { font-family: Georgia, "Times New Roman", serif; }
