@@ -1,8 +1,42 @@
 @import "tailwindcss";
 
-:root { --ink: #193a35; --paper: #f3eee6; --clay: #e9a172; --sage: #d7e1d7; }
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
-::selection { background: var(--clay); color: var(--ink); }
-.serif { font-family: Georgia, "Times New Roman", serif; }
+@theme {
+  --color-ink: #193a35;
+  --color-paper: #f3eee6;
+  --color-clay: #e9a172;
+  --color-sun: #f4d48e;
+  --color-sage: #d7e1d7;
+  --color-night: #1d2825;
+  --color-cream: #f8f0e7;
+  --color-pine: #277263;
+  --color-moss: #536b66;
+  --color-sand: #d5cabe;
+  --color-fern: #abc0b3;
+  --color-mist: #b0d4bf;
+  --color-fog: #c6d1cc;
+  --color-stone: #d3cbc1;
+  --color-slate: #829087;
+  --color-haze: #b8c5bd;
+  --color-rule: #ced9d3;
+  --color-coral: #ffb4a0;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+::selection {
+  background: var(--color-clay);
+  color: var(--color-ink);
+}
+.serif {
+  font-family: Georgia, "Times New Roman", serif;
+}

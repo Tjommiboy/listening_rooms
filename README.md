@@ -17,7 +17,7 @@ Open `http://localhost:3000`.
 
 - `/` — public Listening Rooms landing page
 - `/artists` — artist pricing and onboarding page
-- `/room/anand` — sample artist Listening Room
+- `/room/fjorden-baby` — sample artist Listening Room (rooms are defined in `lib/rooms.ts`)
 - `/studio` — creator studio UI with local file selection
 
 ## Before going live
