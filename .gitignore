@@ -3,3 +3,8 @@ node_modules/
 .env*
 !.env.example
 *.tsbuildinfo
+
+# Cloudflare local state and build output
+.wrangler/
+.open-next/
+.dev.vars*

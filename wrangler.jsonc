@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "listening-rooms",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "services": [
+    // Self-reference required by OpenNext; must match "name" above.
+    { "binding": "WORKER_SELF_REFERENCE", "service": "listening-rooms" },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "listening-rooms",
+      // Replace with the id printed by: npx wrangler d1 create listening-rooms
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      // Only used by `npm run dev` when no Cloudflare keys are set: a local
+      // stand-in where each band's bucket is a folder. In production every
+      // band gets its own real bucket, created through the Cloudflare API
+      // (see lib/band-buckets.ts). Create this one once so deploys succeed;
+      // it stays empty.
+      "binding": "DEV_MEDIA",
+      "bucket_name": "listening-rooms-dev-media",
+    },
+  ],
+  "observability": { "enabled": true },
+}
