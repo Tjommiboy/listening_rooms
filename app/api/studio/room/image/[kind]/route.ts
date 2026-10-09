@@ -28,7 +28,7 @@ function kindOf(value: string): ImageKind | null {
     : null;
 }
 
-// Uploads the band's profile picture or background image (max 5 MB) into the
+// Uploads the band's profile picture or background image (max 20 MB) into the
 // band's own bucket, under public/. Body: the raw image file.
 export async function PUT(
   request: NextRequest,

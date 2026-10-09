@@ -4,7 +4,7 @@ import { Navigation } from "@/components/Navigation";
 import { RoomEditor } from "@/components/studio/RoomEditor";
 import { getBandByOwner } from "@/lib/access";
 import { getT } from "@/lib/i18n/server";
-import { getRoomProfile } from "@/lib/room-profile";
+import { getRoomProfile, getThemeBanks } from "@/lib/room-profile";
 import { getCurrentUser } from "@/lib/session";
 import { listTracks } from "@/lib/tracks";
 
@@ -15,8 +15,9 @@ export default async function CustomizeRoomPage() {
   const band = await getBandByOwner(user.id);
   if (!band) redirect("/studio");
 
-  const [profile, tracks, { editor: t }] = await Promise.all([
+  const [profile, banks, tracks, { editor: t }] = await Promise.all([
     getRoomProfile(band.id),
+    getThemeBanks(band.id),
     listTracks(band.id),
     getT(),
   ]);
@@ -49,6 +50,7 @@ export default async function CustomizeRoomPage() {
           bandName={band.name}
           memberPriceKr={band.member_price_kr}
           initial={profile}
+          initialBanks={banks}
           tracks={tracks.map(({ id, title }) => ({ id, title }))}
         />
       </section>

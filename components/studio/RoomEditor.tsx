@@ -5,22 +5,35 @@ import { useT } from "@/components/I18nProvider";
 import { RoomPlayer } from "@/components/RoomPlayer";
 import { RoomView } from "@/components/room/RoomView";
 import { ColorPicker } from "@/components/studio/ColorPicker";
+import { GradientControls } from "@/components/studio/GradientControls";
+import { ThemeBanks } from "@/components/studio/ThemeBanks";
 import type { RoomProfile } from "@/lib/room-profile";
 import {
   contrastRatio,
   DEFAULT_THEME,
-  effectivePanelColor,
+  fill,
+  BORDER_OPACITY,
+  BORDER_WIDTH,
+  GLASS_BLUR,
+  RADIUS,
+  hexToRgba,
+  SHADOWS,
+  shadowCss,
+  textBackgrounds,
   FONTS,
   MAX_BIO,
   MAX_LINKS,
   MAX_TAGLINE,
   PALETTES,
-  PRESETS,
+  randomLook,
   type PaletteColors,
   type FontId,
+  type Gradient,
+  type GradientDirection,
   type ImageKind,
   type RoomLink,
   type RoomTheme,
+  type ThemeBanks as Banks,
 } from "@/lib/room-theme";
 
 type Status = "clean" | "dirty" | "saving" | "saved" | "error";
@@ -35,15 +48,35 @@ const COLOR_TARGETS = [
 ] as const;
 type ColorTarget = (typeof COLOR_TARGETS)[number];
 
+// The colors that can be a blend, and which way each blend flows at first.
+const GRADIENT_OF = {
+  bgColor: { key: "bgGradient", direction: "s" },
+  accentColor: { key: "accentGradient", direction: "e" },
+  panelColor: { key: "panelGradient", direction: "se" },
+} as const satisfies Partial<
+  Record<
+    ColorTarget,
+    {
+      key: "bgGradient" | "accentGradient" | "panelGradient";
+      direction: GradientDirection;
+    }
+  >
+>;
+type GradientTarget = keyof typeof GRADIENT_OF;
+const isGradientTarget = (key: ColorTarget): key is GradientTarget =>
+  key in GRADIENT_OF;
+
 export function RoomEditor({
   bandName,
   memberPriceKr,
   initial,
+  initialBanks,
   tracks,
 }: {
   bandName: string;
   memberPriceKr: number;
   initial: RoomProfile;
+  initialBanks: Banks;
   tracks: { id: string; title: string }[];
 }) {
   const all = useT();
@@ -59,9 +92,19 @@ export function RoomEditor({
   const [uploading, setUploading] = useState<ImageKind | null>(null);
   const [status, setStatus] = useState<Status>("clean");
   const [colorTarget, setColorTarget] = useState<ColorTarget>("bgColor");
+  // Which end of a blend the color picker is editing: 0 = from, 1 = to.
+  const [stop, setStop] = useState<0 | 1>(0);
   const [error, setError] = useState("");
 
+  // One step back after loading a slot or rolling random colors.
+  const [undo, setUndo] = useState<RoomTheme | null>(null);
+
   const touch = () => setStatus("dirty");
+  const replaceTheme = (next: RoomTheme) => {
+    setUndo(theme);
+    setTheme(next);
+    touch();
+  };
   const set = <K extends keyof RoomTheme>(key: K, value: RoomTheme[K]) => {
     setTheme((current) => ({ ...current, [key]: value }));
     touch();
@@ -113,13 +156,30 @@ export function RoomEditor({
     setImages((current) => ({ ...current, [kind]: null }));
   }
 
-  // Readability check: text against the boxes and against the bare background.
-  const panelContrast = contrastRatio(
-    theme.textColor,
-    effectivePanelColor(theme),
+  // Readability check: text against the boxes and against the bare
+  // background, at both ends of every blend.
+  const surfaces = textBackgrounds(theme);
+  const worst = Math.min(
+    ...[...surfaces.bgs, ...surfaces.panels].map((c) =>
+      contrastRatio(theme.textColor, c),
+    ),
   );
-  const bgContrast = contrastRatio(theme.textColor, theme.bgColor);
-  const worst = Math.min(panelContrast, bgContrast);
+
+  const gradientOf = (key: ColorTarget): Gradient | null =>
+    isGradientTarget(key) ? theme[GRADIENT_OF[key].key] : null;
+  const activeGradient = gradientOf(colorTarget);
+  const editingStop = activeGradient ? stop : 0;
+  const pickerValue =
+    editingStop === 1 && activeGradient
+      ? activeGradient.color
+      : theme[colorTarget];
+  const pickColor = (hex: string) => {
+    if (editingStop === 1 && activeGradient && isGradientTarget(colorTarget)) {
+      set(GRADIENT_OF[colorTarget].key, { ...activeGradient, color: hex });
+    } else {
+      set(colorTarget, hex);
+    }
+  };
 
   const previewProfile: RoomProfile = {
     tagline,
@@ -139,39 +199,47 @@ export function RoomEditor({
     <div className="mt-10 grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
       {/* ---------------- Controls ---------------- */}
       <div className="space-y-8">
-        <Section title={t.presets}>
-          <div className="grid grid-cols-5 gap-2">
-            {PRESETS.map((preset) => {
-              const p = { ...DEFAULT_THEME, ...preset.theme };
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => {
-                    setTheme((current) => ({
-                      ...current,
-                      ...preset.theme,
-                    }));
-                    touch();
-                  }}
-                  className="overflow-hidden rounded border border-sand text-[11px] font-bold dark:border-slate/40"
-                  style={{
-                    background: p.bgColor,
-                    color: p.textColor,
-                    fontFamily: FONTS[p.headingFont].stack,
-                  }}
-                >
-                  <span
-                    className="block h-2"
-                    style={{ background: p.accentColor }}
-                  />
-                  <span className="block px-1 py-3">
-                    {t.presetNames[preset.id] ?? preset.id}
-                  </span>
-                </button>
-              );
-            })}
+        <Section title={t.sectionBanks}>
+          <p className="-mt-1 mb-3 text-xs text-moss dark:text-stone">
+            {t.banksHint}
+          </p>
+          <ThemeBanks
+            initial={initialBanks}
+            theme={theme}
+            onLoad={replaceTheme}
+          />
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                replaceTheme(
+                  randomLook(theme, {
+                    keepBackground: Boolean(images.background),
+                  }),
+                )
+              }
+              className="bg-ink px-4 py-2 text-sm font-bold text-paper disabled:opacity-40 dark:bg-clay dark:text-ink"
+            >
+              🎲 {t.randomize}
+            </button>
+            <button
+              type="button"
+              disabled={!undo}
+              onClick={() => {
+                if (!undo) return;
+                setTheme(undo);
+                setUndo(null);
+                touch();
+              }}
+              className="border border-current px-3 py-2 text-sm font-bold disabled:opacity-40"
+            >
+              ↶ {t.undo}
+            </button>
           </div>
+          <p className="mt-2 text-xs text-moss dark:text-stone">
+            {t.randomizeHint}
+            {images.background && ` ${t.randomizeKeepsPicture}`}
+          </p>
         </Section>
 
         <Section title={t.sectionProfile}>
@@ -227,7 +295,10 @@ export function RoomEditor({
             {PALETTES.map((p) => {
               const active = (
                 Object.keys(p.colors) as (keyof PaletteColors)[]
-              ).every((key) => theme[key] === p.colors[key]);
+              ).every(
+                (key) =>
+                  JSON.stringify(theme[key]) === JSON.stringify(p.colors[key]),
+              );
               return (
                 <button
                   key={p.id}
@@ -239,7 +310,7 @@ export function RoomEditor({
                   }}
                   className={`overflow-hidden rounded border text-left text-[11px] font-bold ${active ? "border-2 border-ink dark:border-cream" : "border-sand dark:border-slate/40"}`}
                   style={{
-                    background: p.colors.bgColor,
+                    background: fill(p.colors.bgColor, p.colors.bgGradient),
                     color: p.colors.textColor,
                   }}
                 >
@@ -255,7 +326,15 @@ export function RoomEditor({
                       <span
                         key={key}
                         className="flex-1"
-                        style={{ background: p.colors[key] }}
+                        style={{
+                          background:
+                            key === "textColor"
+                              ? p.colors[key]
+                              : fill(
+                                  p.colors[key],
+                                  p.colors[GRADIENT_OF[key].key],
+                                ),
+                        }}
                       />
                     ))}
                   </span>
@@ -277,24 +356,50 @@ export function RoomEditor({
                 type="button"
                 role="tab"
                 aria-selected={colorTarget === key}
-                onClick={() => setColorTarget(key)}
+                onClick={() => {
+                  setColorTarget(key);
+                  setStop(0);
+                }}
                 className={`flex flex-col items-center gap-1 rounded border px-1 py-2 text-xs font-bold ${colorTarget === key ? "border-2 border-ink bg-white/60 dark:border-cream dark:bg-white/10" : "border-sand dark:border-slate/40"}`}
               >
                 <span
                   aria-hidden="true"
                   className="size-7 rounded-full border border-black/20"
-                  style={{ background: theme[key] }}
+                  style={{ background: fill(theme[key], gradientOf(key)) }}
                 />
                 {t[key]}
               </button>
             ))}
           </div>
+          {isGradientTarget(colorTarget) && (
+            <div className="mt-4">
+              <GradientControls
+                base={theme[colorTarget]}
+                gradient={activeGradient}
+                stop={editingStop}
+                onStop={setStop}
+                onChange={(gradient) =>
+                  set(GRADIENT_OF[colorTarget].key, gradient)
+                }
+                onSwap={() => {
+                  if (!activeGradient) return;
+                  setTheme((current) => ({
+                    ...current,
+                    [colorTarget]: activeGradient.color,
+                    [GRADIENT_OF[colorTarget].key]: {
+                      ...activeGradient,
+                      color: current[colorTarget],
+                    },
+                  }));
+                  touch();
+                }}
+                defaultDirection={GRADIENT_OF[colorTarget].direction}
+                labels={t}
+              />
+            </div>
+          )}
           <div className="mt-4">
-            <ColorPicker
-              value={theme[colorTarget]}
-              onChange={(hex) => set(colorTarget, hex)}
-              labels={t}
-            />
+            <ColorPicker value={pickerValue} onChange={pickColor} labels={t} />
           </div>
           <label className={`${label} mt-5`} htmlFor="opacity">
             {t.panelOpacity} ({theme.panelOpacity} %)
@@ -345,6 +450,127 @@ export function RoomEditor({
               </fieldset>
             )}
           </div>
+        </Section>
+
+        <Section title={t.sectionBoxes}>
+          <p className="text-sm font-bold" id="shadow-label">
+            {t.shadow}
+          </p>
+          <div
+            role="radiogroup"
+            aria-labelledby="shadow-label"
+            className="mt-2 grid grid-cols-3 gap-2"
+          >
+            {SHADOWS.map((shadow) => (
+              <button
+                key={shadow}
+                type="button"
+                role="radio"
+                aria-checked={theme.shadow === shadow}
+                onClick={() => set("shadow", shadow)}
+                className={`overflow-hidden rounded border text-xs font-bold ${theme.shadow === shadow ? "border-2 border-ink dark:border-cream" : "border-sand dark:border-slate/40"}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="block px-4 pb-5 pt-3"
+                  style={{ background: fill(theme.bgColor, theme.bgGradient) }}
+                >
+                  <span
+                    className="block h-7 rounded"
+                    style={{
+                      background: fill(
+                        hexToRgba(
+                          theme.panelColor,
+                          Math.max(theme.panelOpacity, 70),
+                        ),
+                        theme.panelGradient,
+                        theme.panelGradient
+                          ? hexToRgba(
+                              theme.panelGradient.color,
+                              Math.max(theme.panelOpacity, 70),
+                            )
+                          : undefined,
+                      ),
+                      boxShadow: shadowCss(shadow, {
+                        text: theme.textColor,
+                        accent: theme.accentColor,
+                      }),
+                    }}
+                  />
+                </span>
+                <span className="block px-1 py-1.5">
+                  {t.shadowNames[shadow]}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <label className="mt-6 flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={theme.glass}
+              onChange={(e) => set("glass", e.target.checked)}
+              className="mt-1 size-4"
+            />
+            <span>
+              <span className="block text-sm font-bold">{t.glass}</span>
+              <span className="block text-xs text-moss dark:text-stone">
+                {t.glassHint}
+              </span>
+            </span>
+          </label>
+          {theme.glass && (
+            <>
+              <label className={`${label} mt-4`} htmlFor="glass-blur">
+                {t.glassBlur} ({theme.glassBlur} px)
+              </label>
+              <input
+                id="glass-blur"
+                type="range"
+                min={GLASS_BLUR.min}
+                max={GLASS_BLUR.max}
+                value={theme.glassBlur}
+                onChange={(e) => set("glassBlur", Number(e.target.value))}
+                className="mt-2 w-full"
+              />
+              {theme.panelOpacity > 60 && (
+                <p className="mt-3 rounded bg-white/60 px-3 py-2 text-sm dark:bg-white/10">
+                  {t.glassTooSolid}{" "}
+                  <button
+                    type="button"
+                    onClick={() => set("panelOpacity", 30)}
+                    className="font-bold underline"
+                  >
+                    {t.glassMakeClear}
+                  </button>
+                </p>
+              )}
+            </>
+          )}
+
+          <p className="mt-6 text-sm font-bold">{t.frame}</p>
+          {(
+            [
+              ["borderWidth", BORDER_WIDTH, t.borderWidth, "px"],
+              ["borderOpacity", BORDER_OPACITY, t.borderOpacity, "%"],
+              ["radius", RADIUS, t.radius, "px"],
+            ] as const
+          ).map(([key, range, text, unit]) => (
+            <div key={key} className="mt-3">
+              <label className="block text-sm" htmlFor={`frame-${key}`}>
+                {text} ({theme[key]} {unit})
+              </label>
+              <input
+                id={`frame-${key}`}
+                type="range"
+                min={range.min}
+                max={range.max}
+                value={theme[key]}
+                onChange={(e) => set(key, Number(e.target.value))}
+                className="mt-1 w-full"
+              />
+            </div>
+          ))}
         </Section>
 
         <Section title={t.sectionFonts}>

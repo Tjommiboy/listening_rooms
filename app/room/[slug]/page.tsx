@@ -9,6 +9,7 @@ import { demoMembershipEnabled } from "@/lib/demo";
 import { bookletHasContent, listAlbums, listBooklets } from "@/lib/albums";
 import { getT } from "@/lib/i18n/server";
 import { getRoomProfile } from "@/lib/room-profile";
+import { BOX_EFFECTS } from "@/lib/room-theme";
 import { getCurrentUser } from "@/lib/session";
 import { listTracks } from "@/lib/tracks";
 
@@ -59,7 +60,9 @@ export default async function RoomPage({
           isOwner ? (
             <Link
               href="/studio/rom"
-              className="block rounded-lg border-2 border-dashed border-[var(--room-accent)] bg-[var(--room-panel)] px-4 py-3 text-center text-sm font-bold backdrop-blur-sm"
+              className={`block border-dashed [background:var(--room-panel)] px-4 py-3 text-center text-sm font-bold ${BOX_EFFECTS}`}
+              // Always a visible dashed line, whatever the band picks for boxes.
+              style={{ borderWidth: 2, borderColor: "var(--room-accent)" }}
             >
               ✎ {t.customize}
             </Link>

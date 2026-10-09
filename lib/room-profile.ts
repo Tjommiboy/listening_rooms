@@ -1,10 +1,12 @@
 import { getEnv } from "@/lib/cf";
 import {
+  parseBanks,
   parseLinks,
   parseTheme,
   type ImageKind,
   type RoomLink,
   type RoomTheme,
+  type ThemeBanks,
 } from "@/lib/room-theme";
 
 export type RoomProfile = {
@@ -49,4 +51,13 @@ export async function getRoomProfile(bandId: string): Promise<RoomProfile> {
       ? imageUrl(bandId, "background", version)
       : null,
   };
+}
+
+/** The band's four saved looks (empty slots are null). */
+export async function getThemeBanks(bandId: string): Promise<ThemeBanks> {
+  const { DB } = await getEnv();
+  const row = await DB.prepare(`SELECT theme_banks FROM bands WHERE id = ?1`)
+    .bind(bandId)
+    .first<{ theme_banks: string | null }>();
+  return parseBanks(row?.theme_banks);
 }

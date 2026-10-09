@@ -5,6 +5,7 @@ import { useT } from "@/components/I18nProvider";
 import { BookletView } from "@/components/room/BookletView";
 import { useListenTracker } from "@/components/useListenTracker";
 import type { Booklet } from "@/lib/albums";
+import { BOX_EFFECTS } from "@/lib/room-theme";
 
 type Track = { id: string; title: string };
 type PlayerAlbum = {
@@ -68,8 +69,10 @@ export function RoomPlayer({
   };
 
   return (
-    <section className="overflow-hidden rounded-lg border border-[var(--room-accent)] bg-[var(--room-panel)] backdrop-blur-sm">
-      <div className="flex items-center justify-between gap-3 bg-[var(--room-accent)] px-4 py-2 text-[var(--room-accent-text)]">
+    <section
+      className={`overflow-hidden [background:var(--room-panel)] ${BOX_EFFECTS}`}
+    >
+      <div className="flex items-center justify-between gap-3 [background:var(--room-accent-fill)] px-4 py-2 text-[var(--room-accent-text)]">
         <p className="text-sm font-bold uppercase tracking-[.12em]">
           ♫ {canPlay ? t.hasAccess : t.membersOnly}
         </p>
@@ -98,7 +101,7 @@ export function RoomPlayer({
                 setCurrent(0);
                 setStarted(false);
               }}
-              className={`shrink-0 rounded-full border border-[var(--room-accent)] px-3 py-1 font-bold ${albumId === (a?.id ?? null) ? "bg-[var(--room-accent)] text-[var(--room-accent-text)]" : ""}`}
+              className={`shrink-0 rounded-full border border-[var(--room-accent)] px-3 py-1 font-bold ${albumId === (a?.id ?? null) ? "[background:var(--room-accent-fill)] text-[var(--room-accent-text)]" : ""}`}
             >
               {a ? `💿 ${a.title}` : t.allSongs}
             </button>
@@ -149,7 +152,7 @@ export function RoomPlayer({
               <button
                 aria-label={t.previous}
                 onClick={() => select(current - 1)}
-                className="grid size-10 place-items-center rounded-full bg-[var(--room-accent)] text-xl text-[var(--room-accent-text)]"
+                className="grid size-10 place-items-center rounded-full [background:var(--room-accent-fill)] text-xl text-[var(--room-accent-text)]"
               >
                 ‹
               </button>
@@ -181,7 +184,7 @@ export function RoomPlayer({
               <button
                 aria-label={t.next}
                 onClick={() => select(current + 1)}
-                className="grid size-10 place-items-center rounded-full bg-[var(--room-accent)] text-xl text-[var(--room-accent-text)]"
+                className="grid size-10 place-items-center rounded-full [background:var(--room-accent-fill)] text-xl text-[var(--room-accent-text)]"
               >
                 ›
               </button>

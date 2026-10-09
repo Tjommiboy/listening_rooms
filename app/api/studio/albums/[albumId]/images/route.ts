@@ -14,7 +14,7 @@ const EXT: Record<string, string> = {
   "image/webp": "webp",
 };
 
-// Adds a picture to the album's booklet. Body: the raw image (max 5 MB).
+// Adds a picture to the album's booklet. Body: the raw image (max 20 MB).
 // Booklet pictures live under booklet/ in the band's bucket and are only
 // served to members (see /api/media/album-images).
 export async function POST(request: NextRequest, { params }: Params) {

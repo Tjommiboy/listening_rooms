@@ -1,7 +1,15 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { RoomProfile } from "@/lib/room-profile";
-import { contrastRatio, FONTS, hexToRgba } from "@/lib/room-theme";
+import {
+  BOX_EFFECTS,
+  bestTextOn,
+  boxEffects,
+  fill,
+  FONTS,
+  hexToRgba,
+  stops,
+} from "@/lib/room-theme";
 
 /**
  * The band's room, styled entirely from its theme. Used by the public room
@@ -32,32 +40,68 @@ export function RoomView({
   fixedBackground?: boolean;
 }) {
   const { theme } = profile;
-  const accentText =
-    contrastRatio(theme.accentColor, "#000000") >
-    contrastRatio(theme.accentColor, "#ffffff")
-      ? "#000000"
-      : "#ffffff";
+  const box = boxEffects(theme);
+  const accentText = bestTextOn(stops(theme.accentColor, theme.accentGradient));
+  const accentFill = fill(theme.accentColor, theme.accentGradient);
+  const panelFill = fill(
+    hexToRgba(theme.panelColor, theme.panelOpacity),
+    theme.panelGradient,
+    theme.panelGradient
+      ? hexToRgba(theme.panelGradient.color, theme.panelOpacity)
+      : undefined,
+  );
+
+  // Background layers, top first: the band's picture (if any), then the
+  // color blend (if any), then the plain background color underneath.
+  const image = profile.backgroundUrl
+    ? {
+        image: `url("${profile.backgroundUrl}")`,
+        repeat: theme.bgMode === "tile" ? "repeat" : "no-repeat",
+        size: theme.bgMode === "tile" ? "auto" : "cover",
+        position: "center top",
+        // Tiles scroll with the page like on MySpace; a full-screen image
+        // stays put behind the content.
+        attachment:
+          fixedBackground && theme.bgMode === "cover" ? "fixed" : "scroll",
+      }
+    : null;
+  const blend = theme.bgGradient
+    ? {
+        image: fill(theme.bgColor, theme.bgGradient),
+        repeat: "no-repeat",
+        size: "100% 100%",
+        position: "center",
+        // A fixed blend spans the screen, so it looks the same while scrolling.
+        attachment: fixedBackground ? "fixed" : "scroll",
+      }
+    : null;
+  const layers = [image, blend].filter((layer) => layer !== null);
+  const list = (key: keyof (typeof layers)[number]) =>
+    layers.map((layer) => layer[key]).join(", ");
 
   const style = {
     "--room-bg": theme.bgColor,
     "--room-text": theme.textColor,
     "--room-accent": theme.accentColor,
+    "--room-accent-fill": accentFill,
     "--room-accent-text": accentText,
-    "--room-panel": hexToRgba(theme.panelColor, theme.panelOpacity),
+    "--room-panel": panelFill,
+    "--room-shadow": box.shadow,
+    "--room-backdrop": box.backdrop,
+    "--room-box-border": box.border,
+    "--room-border-width": box.borderWidth,
+    "--room-radius": box.radius,
     "--room-heading-font": FONTS[theme.headingFont].stack,
     backgroundColor: theme.bgColor,
     color: theme.textColor,
     fontFamily: FONTS[theme.bodyFont].stack,
-    ...(profile.backgroundUrl
+    ...(layers.length > 0
       ? {
-          backgroundImage: `url("${profile.backgroundUrl}")`,
-          backgroundRepeat: theme.bgMode === "tile" ? "repeat" : "no-repeat",
-          backgroundSize: theme.bgMode === "tile" ? "auto" : "cover",
-          backgroundPosition: "center top",
-          // Tiles scroll with the page like on MySpace; a full-screen image
-          // stays put behind the content.
-          backgroundAttachment:
-            fixedBackground && theme.bgMode === "cover" ? "fixed" : "scroll",
+          backgroundImage: list("image"),
+          backgroundRepeat: list("repeat"),
+          backgroundSize: list("size"),
+          backgroundPosition: list("position"),
+          backgroundAttachment: list("attachment"),
         }
       : {}),
   } as CSSProperties;
@@ -66,7 +110,9 @@ export function RoomView({
   const centered = theme.layout === "centered";
 
   const avatar = (
-    <div className="overflow-hidden rounded-lg border-2 border-[var(--room-accent)] bg-[var(--room-panel)]">
+    <div
+      className={`overflow-hidden [background:var(--room-panel)] ${BOX_EFFECTS}`}
+    >
       {profile.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -79,7 +125,9 @@ export function RoomView({
           aria-hidden="true"
           className="grid aspect-square w-full place-items-center text-7xl"
           style={{
-            background: `linear-gradient(135deg, ${theme.accentColor}, ${hexToRgba(theme.accentColor, 35)})`,
+            background: theme.accentGradient
+              ? accentFill
+              : `linear-gradient(135deg, ${theme.accentColor}, ${hexToRgba(theme.accentColor, 35)})`,
             color: accentText,
           }}
         >
@@ -126,12 +174,18 @@ export function RoomView({
   return (
     <div style={style} className="min-h-screen">
       {nav && (
-        <div className="bg-[var(--room-panel)] backdrop-blur-sm">{nav}</div>
+        <div className="[background:var(--room-panel)] [backdrop-filter:var(--room-backdrop)]">
+          {nav}
+        </div>
       )}
       <header
         className={`mx-auto max-w-6xl px-5 pb-6 pt-6 md:pt-10 ${centered ? "max-w-2xl text-center" : ""}`}
       >
-        <div className="rounded-lg bg-[var(--room-panel)] p-6 backdrop-blur-sm md:p-8">
+        <div
+          className={`[background:var(--room-panel)] p-6 md:p-8 ${BOX_EFFECTS}`}
+          // The title box has no colored frame, only the glass rim.
+          style={theme.glass ? undefined : { borderColor: "transparent" }}
+        >
           <p className="text-xs font-bold tracking-[.16em] text-[var(--room-accent)]">
             {t.eyebrow}
           </p>
@@ -189,10 +243,12 @@ export function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-lg border border-[var(--room-accent)] bg-[var(--room-panel)] backdrop-blur-sm">
+    <section
+      className={`overflow-hidden [background:var(--room-panel)] ${BOX_EFFECTS}`}
+    >
       <h2
         style={heading}
-        className="bg-[var(--room-accent)] px-4 py-2 text-sm font-bold uppercase tracking-[.12em] text-[var(--room-accent-text)]"
+        className="[background:var(--room-accent-fill)] px-4 py-2 text-sm font-bold uppercase tracking-[.12em] text-[var(--room-accent-text)]"
       >
         {title}
       </h2>

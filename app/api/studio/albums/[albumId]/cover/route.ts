@@ -14,7 +14,7 @@ const EXT: Record<string, string> = {
   "image/webp": "webp",
 };
 
-// Album cover (raw image body, max 5 MB), stored in the band's own bucket.
+// Album cover (raw image body, max 20 MB), stored in the band's own bucket.
 export async function PUT(request: NextRequest, { params }: Params) {
   const ctx = await requireBandOwner();
   if (!ctx.ok) return ctx.response;
