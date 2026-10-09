@@ -84,6 +84,17 @@ export type Shadow = (typeof SHADOWS)[number];
 
 export const GLASS_BLUR = { min: 4, max: 40, default: 16 } as const;
 
+/**
+ * "Pust" (breath): a slow, living background. Only opacity and transform are
+ * animated, so the graphics card does the work and nothing is repainted.
+ * fade: a soft glow swells and fades. drift: a large color field slowly
+ * wanders. blobs: a few soft color clouds float around.
+ */
+export const BREATHS = ["off", "fade", "drift", "blobs"] as const;
+export type Breath = (typeof BREATHS)[number];
+export const BREATH_SPEED = { min: 6, max: 40, default: 14 } as const; // s per breath
+export const BREATH_STRENGTH = { min: 10, max: 100, default: 50 } as const; // %
+
 /** Box frame: line thickness and corner rounding in px, line opacity in %. */
 export const BORDER_WIDTH = { min: 0, max: 8, default: 1 } as const;
 export const BORDER_OPACITY = { min: 0, max: 100, default: 100 } as const;
@@ -102,6 +113,9 @@ export type RoomTheme = {
   shadow: Shadow;
   glass: boolean; // frosted glass: blurs and brightens what's behind the boxes
   glassBlur: number; // px
+  breath: Breath;
+  breathSpeed: number; // seconds per breath
+  breathStrength: number; // 10–100
   borderWidth: number; // px
   borderOpacity: number; // 0–100
   radius: number; // px
@@ -126,6 +140,9 @@ export const DEFAULT_THEME: RoomTheme = {
   shadow: "none",
   glass: false,
   glassBlur: GLASS_BLUR.default,
+  breath: "off",
+  breathSpeed: BREATH_SPEED.default,
+  breathStrength: BREATH_STRENGTH.default,
   borderWidth: BORDER_WIDTH.default,
   borderOpacity: BORDER_OPACITY.default,
   radius: RADIUS.default,
@@ -194,6 +211,11 @@ export function parseTheme(input: unknown): RoomTheme {
     glassBlur: Number.isFinite(blur)
       ? Math.min(GLASS_BLUR.max, Math.max(GLASS_BLUR.min, Math.round(blur)))
       : d.glassBlur,
+    breath: BREATHS.includes(raw.breath as Breath)
+      ? (raw.breath as Breath)
+      : "off",
+    breathSpeed: clamp(raw.breathSpeed, BREATH_SPEED),
+    breathStrength: clamp(raw.breathStrength, BREATH_STRENGTH),
     borderWidth: clamp(raw.borderWidth, BORDER_WIDTH),
     borderOpacity: clamp(raw.borderOpacity, BORDER_OPACITY),
     radius: clamp(raw.radius, RADIUS),
@@ -275,11 +297,33 @@ export const stops = (base: string, gradient: Gradient | null) =>
 
 /** Every background color the text can end up on, at either end of a blend. */
 export function textBackgrounds(theme: RoomTheme) {
-  const bgs = stops(theme.bgColor, theme.bgGradient);
+  const plain = stops(theme.bgColor, theme.bgGradient);
+  // At the top of a breath, its colors lie over the background.
+  const bgs =
+    theme.breath === "off"
+      ? plain
+      : [
+          ...plain,
+          ...breathColors(theme).flatMap((c) =>
+            plain.map((bg) => blend(c, bg, theme.breathStrength)),
+          ),
+        ];
   const panels = stops(theme.panelColor, theme.panelGradient).flatMap((panel) =>
     bgs.map((bg) => blend(panel, bg, theme.panelOpacity)),
   );
   return { bgs, panels };
+}
+
+/** The two colors a breath is made of: the accent and a neighbour hue. */
+export function breathColors(theme: RoomTheme): [string, string] {
+  const second =
+    theme.accentGradient?.color ??
+    theme.bgGradient?.color ??
+    (() => {
+      const { h, s, v } = hexToHsv(theme.accentColor);
+      return hsvToHex({ h: (h + 50) % 360, s, v });
+    })();
+  return [theme.accentColor, second];
 }
 
 /** Black or white, whichever reads best on every color of the fill. */

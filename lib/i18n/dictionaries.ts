@@ -113,6 +113,8 @@ const nb = {
     devSubmit: "Logg inn som testbruker",
   },
   room: {
+    motionPause: "Pause bevegelse",
+    motionPlay: "Spill av bevegelse",
     eyebrow: "BANDETS LYTTEROM",
     title: (name: string) => `Rommet til ${name}.`,
     intro:
@@ -280,6 +282,21 @@ const nb = {
     tile: "gjentas som fliser",
     sectionFonts: "Skrift",
     sectionBoxes: "Boksene",
+    sectionBreath: "Pust",
+    breathHint:
+      "En rolig, levende bakgrunn som puster sakte. Lett for maskinen, og besøkende kan pause den.",
+    breathNames: {
+      off: "Av",
+      fade: "Glød",
+      drift: "Drift",
+      blobs: "Skyer",
+    },
+    breathSpeed: (s: number) => `Tempo: ett pust tar ${s} sekunder`,
+    breathStrength: "Styrke",
+    breathColorsHint:
+      "Fargene hentes fra aksentfargen og toningen din. Besøkende som har slått av bevegelse i systemet sitt, får et stillbilde.",
+    breathGlassHint:
+      "Glass over en bakgrunn i bevegelse krever mer av maskinen – prøv rommet på mobilen.",
     shadow: "Skygge",
     shadowNames: {
       none: "Ingen",
@@ -603,6 +620,8 @@ const en: Dictionary = {
     devSubmit: "Log in as test user",
   },
   room: {
+    motionPause: "Pause motion",
+    motionPlay: "Play motion",
     eyebrow: "THE BAND'S LISTENING ROOM",
     title: (name: string) => `${name}'s room.`,
     intro:
@@ -770,6 +789,21 @@ const en: Dictionary = {
     tile: "repeat as tiles",
     sectionFonts: "Fonts",
     sectionBoxes: "The boxes",
+    sectionBreath: "Breath",
+    breathHint:
+      "A calm, living background that breathes slowly. Light on the device, and visitors can pause it.",
+    breathNames: {
+      off: "Off",
+      fade: "Glow",
+      drift: "Drift",
+      blobs: "Clouds",
+    },
+    breathSpeed: (s: number) => `Tempo: one breath takes ${s} seconds`,
+    breathStrength: "Strength",
+    breathColorsHint:
+      "The colors come from your accent color and gradient. Visitors who have turned off motion on their device get a still picture.",
+    breathGlassHint:
+      "Glass over a moving background asks more of the device – try the room on a phone.",
     shadow: "Shadow",
     shadowNames: {
       none: "None",

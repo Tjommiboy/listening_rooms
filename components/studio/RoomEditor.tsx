@@ -13,6 +13,9 @@ import {
   DEFAULT_THEME,
   fill,
   BORDER_OPACITY,
+  BREATHS,
+  BREATH_SPEED,
+  BREATH_STRENGTH,
   BORDER_WIDTH,
   GLASS_BLUR,
   RADIUS,
@@ -450,6 +453,58 @@ export function RoomEditor({
               </fieldset>
             )}
           </div>
+        </Section>
+
+        <Section title={t.sectionBreath}>
+          <p className="-mt-1 mb-3 text-xs text-moss dark:text-stone">
+            {t.breathHint}
+          </p>
+          <div role="radiogroup" className="grid grid-cols-4 gap-2">
+            {BREATHS.map((breath) => (
+              <button
+                key={breath}
+                type="button"
+                role="radio"
+                aria-checked={theme.breath === breath}
+                onClick={() => set("breath", breath)}
+                className={`rounded border px-1 py-2 text-xs font-bold ${theme.breath === breath ? "border-2 border-ink bg-white/60 dark:border-cream dark:bg-white/10" : "border-sand dark:border-slate/40"}`}
+              >
+                {t.breathNames[breath]}
+              </button>
+            ))}
+          </div>
+          {theme.breath !== "off" && (
+            <>
+              <label className={`${label} mt-5`} htmlFor="breath-speed">
+                {t.breathSpeed(theme.breathSpeed)}
+              </label>
+              <input
+                id="breath-speed"
+                type="range"
+                min={BREATH_SPEED.min}
+                max={BREATH_SPEED.max}
+                value={theme.breathSpeed}
+                onChange={(e) => set("breathSpeed", Number(e.target.value))}
+                className="mt-2 w-full"
+              />
+              <label className={`${label} mt-4`} htmlFor="breath-strength">
+                {t.breathStrength} ({theme.breathStrength} %)
+              </label>
+              <input
+                id="breath-strength"
+                type="range"
+                min={BREATH_STRENGTH.min}
+                max={BREATH_STRENGTH.max}
+                value={theme.breathStrength}
+                onChange={(e) => set("breathStrength", Number(e.target.value))}
+                className="mt-2 w-full"
+              />
+              <p className="mt-3 text-xs text-moss dark:text-stone">
+                {t.breathColorsHint}
+                {theme.glass && ` ${t.breathGlassHint}`}
+              </p>
+            </>
+          )}
         </Section>
 
         <Section title={t.sectionBoxes}>

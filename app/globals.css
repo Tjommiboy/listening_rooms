@@ -69,3 +69,75 @@ body {
   border: 2px solid #fff;
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6);
 }
+
+/* ---- Pust: breathing room backgrounds ----
+   Only opacity and transform animate, so the browser composites on the GPU
+   and never repaints the gradients. Visitors who prefer reduced motion, or
+   who press pause in the room, get a still background. */
+.lr-breath {
+  pointer-events: none;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+.lr-breath > * {
+  position: absolute;
+  animation-duration: var(--breath-speed, 14s);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+.lr-breath-fade {
+  inset: 0;
+  /* the still look when motion is reduced or paused before it starts */
+  opacity: calc(var(--breath-max) * 0.6);
+  animation-name: lr-breathe;
+}
+.lr-breath-drift {
+  inset: -50%;
+  opacity: var(--breath-max);
+  animation-name: lr-drift;
+}
+.lr-breath-blob {
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: var(--breath-max);
+  animation-name: lr-float;
+}
+@keyframes lr-breathe {
+  from {
+    opacity: calc(var(--breath-max) * 0.15);
+  }
+  to {
+    opacity: var(--breath-max);
+  }
+}
+@keyframes lr-drift {
+  from {
+    transform: translate3d(-8%, -6%, 0) rotate(-6deg) scale(1);
+  }
+  to {
+    transform: translate3d(8%, 6%, 0) rotate(6deg) scale(1.15);
+  }
+}
+@keyframes lr-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.85);
+  }
+  50% {
+    transform: translate3d(12vmax, -8vmax, 0) scale(1.1);
+  }
+  100% {
+    transform: translate3d(-10vmax, 10vmax, 0) scale(0.95);
+  }
+}
+[data-motion="paused"] .lr-breath > * {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lr-breath > * {
+    animation: none;
+  }
+}

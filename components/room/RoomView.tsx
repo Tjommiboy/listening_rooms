@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { RoomProfile } from "@/lib/room-profile";
+import { BreathLayer } from "@/components/room/BreathLayer";
+import { MotionPause } from "@/components/room/MotionPause";
 import {
   BOX_EFFECTS,
   bestTextOn,
@@ -172,7 +174,10 @@ export function RoomView({
   );
 
   return (
-    <div style={style} className="min-h-screen">
+    <div style={style} className="relative isolate min-h-screen">
+      <BreathLayer theme={theme} fixed={fixedBackground} />
+      {/* The pause button belongs to the live room, not the editor preview. */}
+      {fixedBackground && theme.breath !== "off" && <MotionPause />}
       {nav && (
         <div className="[background:var(--room-panel)] [backdrop-filter:var(--room-backdrop)]">
           {nav}
