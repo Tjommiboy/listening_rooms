@@ -9,6 +9,7 @@ export type UploadRow = {
   content_type: string;
   size_bytes: number;
   parts_total: number;
+  duration_sec: number | null;
 };
 
 export async function getUpload(id: string, bandId: string) {

@@ -1,5 +1,5 @@
 import { addMonth } from "@/lib/access";
-import { getEnv } from "@/lib/cf";
+import { getEnv, newId } from "@/lib/cf";
 import type { AgreementStatus } from "@/lib/vipps";
 
 export type AgreementKind = "fan" | "band_plan";
@@ -46,19 +46,36 @@ export async function latestAgreement(
 
 /**
  * Records a captured payment: the agreement is paid one month from when the
- * money was taken. Using MAX makes this safe to call twice for the same
- * charge (webhook + status check) without giving away an extra month.
+ * money was taken. The paid period only ever moves forward, so calling this
+ * twice for the same charge (webhook + status check) neither gives away an
+ * extra month nor logs the payment twice.
  */
 export async function markPaid(agreementId: string, capturedAt: number) {
   const { DB } = await getEnv();
-  await DB.prepare(
+  const now = Date.now();
+  const extended = await DB.prepare(
     `UPDATE agreements
         SET status = CASE WHEN status = 'PENDING' THEN 'ACTIVE' ELSE status END,
-            paid_until = MAX(COALESCE(paid_until, 0), ?2),
+            paid_until = ?2,
             updated_at = ?3
-      WHERE id = ?1`,
+      WHERE id = ?1 AND COALESCE(paid_until, 0) < ?2
+      RETURNING kind, band_id, amount_ore`,
   )
-    .bind(agreementId, addMonth(capturedAt), Date.now())
+    .bind(agreementId, addMonth(capturedAt), now)
+    .first<{ kind: string; band_id: string; amount_ore: number }>();
+  if (!extended) return;
+  await DB.prepare(
+    `INSERT INTO payments (id, agreement_id, kind, band_id, amount_ore, captured_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+  )
+    .bind(
+      newId("pay"),
+      agreementId,
+      extended.kind,
+      extended.band_id,
+      extended.amount_ore,
+      capturedAt,
+    )
     .run();
 }
 

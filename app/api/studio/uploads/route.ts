@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     filename?: unknown;
     contentType?: unknown;
     size?: unknown;
+    durationSec?: unknown;
   };
   const filename = typeof body.filename === "string" ? body.filename : "";
   const title =
@@ -51,6 +52,13 @@ export async function POST(request: NextRequest) {
       { status: 413 },
     );
 
+  // Track length as read by the browser; used to sanity-check play reports.
+  const rawDuration = Math.round(Number(body.durationSec));
+  const durationSec =
+    Number.isFinite(rawDuration) && rawDuration > 0 && rawDuration < 4 * 3600
+      ? rawDuration
+      : null;
+
   const { DB } = await getEnv();
   const bucket = await ensureBandBucket(band);
   const trackId = newId("trk");
@@ -61,8 +69,8 @@ export async function POST(request: NextRequest) {
   const id = trackId; // the upload id becomes the track id when it completes
   const partsTotal = Math.ceil(size / PART_SIZE);
   await DB.prepare(
-    `INSERT INTO uploads (id, band_id, r2_upload_id, r2_key, title, content_type, size_bytes, parts_total, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
+    `INSERT INTO uploads (id, band_id, r2_upload_id, r2_key, title, content_type, size_bytes, parts_total, created_at, duration_sec)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
   )
     .bind(
       id,
@@ -74,6 +82,7 @@ export async function POST(request: NextRequest) {
       size,
       partsTotal,
       Date.now(),
+      durationSec,
     )
     .run();
 

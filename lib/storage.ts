@@ -45,7 +45,7 @@ export async function storageUsed(bandId: string) {
   const { DB } = await getEnv();
   const row = await DB.prepare(
     `SELECT
-       (SELECT COALESCE(SUM(size_bytes), 0) FROM tracks WHERE band_id = ?1) AS stored,
+       (SELECT COALESCE(SUM(size_bytes), 0) FROM tracks WHERE band_id = ?1 AND deleted_at IS NULL) AS stored,
        (SELECT COALESCE(SUM(size_bytes), 0) FROM uploads
          WHERE band_id = ?1 AND created_at > ?2) AS reserved`,
   )

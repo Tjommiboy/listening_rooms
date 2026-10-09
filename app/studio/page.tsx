@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { Navigation } from "@/components/Navigation";
 import { CreateBandForm } from "@/components/studio/CreateBandForm";
-import { Uploader } from "@/components/studio/Uploader";
+import { StatsPanel } from "@/components/studio/StatsPanel";
+import { Library } from "@/components/studio/Library";
 import { SubscribeButton } from "@/components/SubscribeButton";
 import { bandPlanActive, getBandByOwner } from "@/lib/access";
+import { isAdmin } from "@/lib/admin";
+import { listAlbums, listBooklets } from "@/lib/albums";
 import { ARTIST_PLAN_PRICE_KR } from "@/lib/pricing";
 import { getT } from "@/lib/i18n/server";
+import { currentMonth } from "@/lib/reports";
 import { getCurrentUser } from "@/lib/session";
 import { QUOTA_BYTES, storageUsed } from "@/lib/storage";
 import { listTracks } from "@/lib/tracks";
@@ -13,13 +17,15 @@ import { listTracks } from "@/lib/tracks";
 export default async function StudioPage() {
   const [user, { studio: t }] = await Promise.all([getCurrentUser(), getT()]);
   const band = user ? await getBandByOwner(user.id) : null;
-  const [planActive, tracks, used] = band
+  const [planActive, tracks, used, albums, booklets] = band
     ? await Promise.all([
         bandPlanActive(band.id),
         listTracks(band.id),
         storageUsed(band.id),
+        listAlbums(band.id),
+        listBooklets(band.id),
       ])
-    : [false, [], { stored: 0, reserved: 0 }];
+    : [false, [], { stored: 0, reserved: 0 }, [], {}];
 
   return (
     <main className="min-h-screen bg-paper dark:bg-night">
@@ -77,9 +83,11 @@ export default async function StudioPage() {
               </span>
             </Link>
             <div className="mt-12 grid gap-6 md:grid-cols-[1fr_300px]">
-              <Uploader
+              <Library
                 canUpload={planActive}
                 initialTracks={tracks}
+                initialAlbums={albums}
+                initialBooklets={booklets}
                 usedBytes={used.stored}
                 quotaBytes={QUOTA_BYTES}
               />
@@ -99,6 +107,7 @@ export default async function StudioPage() {
                 <SubscribeButton plan signedIn hasAccess={planActive} />
               </div>
             </div>
+            <StatsPanel currentMonth={currentMonth()} isAdmin={isAdmin(user)} />
           </>
         )}
       </section>

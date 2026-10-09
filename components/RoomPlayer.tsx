@@ -2,31 +2,58 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/components/I18nProvider";
+import { BookletView } from "@/components/room/BookletView";
+import { useListenTracker } from "@/components/useListenTracker";
+import type { Booklet } from "@/lib/albums";
 
 type Track = { id: string; title: string };
+type PlayerAlbum = {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+  description: string;
+  trackIds: string[];
+  hasBooklet: boolean;
+  /** Only sent to members (and the band). */
+  booklet?: Booklet;
+};
 
 /**
  * MySpace-style music player: the current track on top, the full track list
  * below. Colors come from the room theme (CSS variables set by RoomView).
  */
 export function RoomPlayer({
-  tracks,
+  tracks: allTracks,
+  albums = [],
   canPlay,
   autoplay = false,
   preview = false,
 }: {
   tracks: Track[];
+  /** The band's albums; fans can switch between "All songs" and an album. */
+  albums?: PlayerAlbum[];
   canPlay: boolean;
   autoplay?: boolean;
   /** In the editor preview: show the player, but never load audio. */
   preview?: boolean;
 }) {
-  const t = useT().player;
+  const all = useT();
+  const t = all.player;
+  const [bookletOpen, setBookletOpen] = useState(false);
+  const [albumId, setAlbumId] = useState<string | null>(null);
+  const album = albums.find((a) => a.id === albumId) ?? null;
+  const byId = new Map(allTracks.map((tr) => [tr.id, tr]));
+  const tracks = album
+    ? album.trackIds.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []))
+    : allTracks;
   const [current, setCurrent] = useState(0);
   const [started, setStarted] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
   const track = tracks[current];
   const playable = canPlay && !preview;
+
+  // Counts listening time for TONO reports and the band's stats.
+  useListenTracker(audio, track?.id, playable);
 
   // MySpace-style autoplay of the first track (for members). Browsers may
   // block it until the visitor has interacted with the page; that's fine.
@@ -52,6 +79,58 @@ export function RoomPlayer({
           </p>
         )}
       </div>
+
+      {albums.length > 0 && (
+        <div
+          role="tablist"
+          aria-label={t.albums}
+          className="flex gap-2 overflow-x-auto border-b border-[var(--room-accent)]/40 px-4 py-3 text-sm"
+        >
+          {[null, ...albums].map((a) => (
+            <button
+              key={a?.id ?? "all"}
+              type="button"
+              role="tab"
+              aria-selected={albumId === (a?.id ?? null)}
+              onClick={() => {
+                setAlbumId(a?.id ?? null);
+                setBookletOpen(false);
+                setCurrent(0);
+                setStarted(false);
+              }}
+              className={`shrink-0 rounded-full border border-[var(--room-accent)] px-3 py-1 font-bold ${albumId === (a?.id ?? null) ? "bg-[var(--room-accent)] text-[var(--room-accent-text)]" : ""}`}
+            >
+              {a ? `💿 ${a.title}` : t.allSongs}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {album && (album.coverUrl || album.description) && (
+        <div className="flex gap-4 px-5 pt-5">
+          {album.coverUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={album.coverUrl}
+              alt=""
+              className="size-24 shrink-0 rounded border border-[var(--room-accent)] object-cover"
+            />
+          )}
+          <div className="min-w-0">
+            <p
+              className="text-lg font-bold"
+              style={{ fontFamily: "var(--room-heading-font)" }}
+            >
+              {album.title}
+            </p>
+            {album.description && (
+              <p className="mt-1 whitespace-pre-line text-sm opacity-80">
+                {album.description}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="p-5">
         {track ? (
@@ -136,6 +215,29 @@ export function RoomPlayer({
           <h2 className="text-2xl font-bold">{t.empty}</h2>
         )}
       </div>
+      {album?.hasBooklet && (
+        <div className="border-t border-[var(--room-accent)]/40">
+          {album.booklet ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setBookletOpen(!bookletOpen)}
+                aria-expanded={bookletOpen}
+                className="w-full px-5 py-3 text-left text-sm font-bold"
+              >
+                {bookletOpen ? all.booklet.close : all.booklet.open}
+              </button>
+              {bookletOpen && (
+                <BookletView booklet={album.booklet} songs={tracks} />
+              )}
+            </>
+          ) : (
+            <p className="px-5 py-3 text-sm opacity-80">
+              📖 {all.booklet.membersOnly}
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 }

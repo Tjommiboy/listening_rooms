@@ -6,6 +6,7 @@ import { RoomView } from "@/components/room/RoomView";
 import { SubscribeButton } from "@/components/SubscribeButton";
 import { getBandBySlug, hasAccess } from "@/lib/access";
 import { demoMembershipEnabled } from "@/lib/demo";
+import { bookletHasContent, listAlbums, listBooklets } from "@/lib/albums";
 import { getT } from "@/lib/i18n/server";
 import { getRoomProfile } from "@/lib/room-profile";
 import { getCurrentUser } from "@/lib/session";
@@ -20,12 +21,15 @@ export default async function RoomPage({
   const band = await getBandBySlug(slug);
   if (!band) notFound();
 
-  const [user, tracks, profile, { room: t }] = await Promise.all([
-    getCurrentUser(),
-    listTracks(band.id),
-    getRoomProfile(band.id),
-    getT(),
-  ]);
+  const [user, tracks, albums, booklets, profile, { room: t }] =
+    await Promise.all([
+      getCurrentUser(),
+      listTracks(band.id),
+      listAlbums(band.id),
+      listBooklets(band.id),
+      getRoomProfile(band.id),
+      getT(),
+    ]);
   const canPlay = await hasAccess(user?.id, band);
   const isOwner = Boolean(user && band.owner_id === user.id);
 
@@ -39,6 +43,14 @@ export default async function RoomPage({
         player={
           <RoomPlayer
             tracks={tracks.map(({ id, title }) => ({ id, title }))}
+            albums={albums
+              .filter((a) => a.trackIds.length > 0)
+              .map((a) => ({
+                ...a,
+                hasBooklet: bookletHasContent(booklets[a.id]),
+                // The booklet itself is only sent to members and the band.
+                booklet: canPlay ? booklets[a.id] : undefined,
+              }))}
             canPlay={canPlay}
             autoplay={profile.theme.autoplay}
           />

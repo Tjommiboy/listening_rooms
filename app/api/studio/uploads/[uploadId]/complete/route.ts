@@ -52,9 +52,9 @@ export async function POST(
 
   await DB.batch([
     DB.prepare(
-      `INSERT INTO tracks (id, band_id, title, r2_key, content_type, size_bytes, position, created_at)
+      `INSERT INTO tracks (id, band_id, title, r2_key, content_type, size_bytes, position, created_at, duration_sec)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6,
-               (SELECT COALESCE(MAX(position), 0) + 1 FROM tracks WHERE band_id = ?2), ?7)`,
+               (SELECT COALESCE(MAX(position), 0) + 1 FROM tracks WHERE band_id = ?2), ?7, ?8)`,
     ).bind(
       upload.id,
       upload.band_id,
@@ -63,6 +63,7 @@ export async function POST(
       upload.content_type,
       size,
       Date.now(),
+      upload.duration_sec,
     ),
     DB.prepare("DELETE FROM uploads WHERE id = ?1").bind(upload.id),
   ]);

@@ -32,6 +32,15 @@ npm run dev
 - **Tilgang** styres av tabellen `agreements` i D1. Én rad per Vipps-avtale (`fan` = 19 kr for ett band, `band_plan` = 49 kr). Webhooken setter `paid_until` når et trekk er gjennomført. En fan har tilgang så lenge `paid_until` (+ 3 dagers frist) er fram i tid. En stoppet avtale gir tilgang ut måneden som er betalt.
 - **All avspilling går gjennom `/api/stream/<trackId>`**, som sjekker tilgang før én eneste byte sendes, og støtter `Range` så spoling fungerer.
 
+## Lyttetall og TONO-rapport
+
+- Spilleren rapporterer hvor lenge hver låt faktisk ble hørt (`POST /api/plays`): ved start, hvert 15. sekund og ved pause/lukking. Spoling teller ikke, og serveren godtar aldri flere sekunder enn tiden som faktisk har gått eller lengden på låten.
+- **30 sekunder = én strømming.** Bandets egne avspillinger telles ikke.
+- For hver låt fyller bandet inn rettigheter i Studio: egen låt (ingen TONO-medlemmer), registrert i TONO, eller cover – med låtskrivere og eventuelt ISWC/ISRC.
+- Studio viser strømminger, minutter, lyttere, inntekt og et **TONO-anslag** per måned (12 % av inntekt eller 5 øre per minutt, det høyeste – https://en.tono.no/customers/online/). Låter uten rettighetsinfo regnes som TONO-repertoar.
+- CSV-rapport: `/api/reports/tono?month=2026-10&type=tracks|summary` for eget band, `&scope=all` for alle band (krever at bruker-ID står i `ADMIN_USER_IDS`).
+- Slettede låter beholdes som historikk, så tidligere måneders rapporter stemmer.
+
 ## Publisere til Cloudflare
 
 ```bash
