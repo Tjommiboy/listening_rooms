@@ -203,40 +203,140 @@ const MOTIFS: Motif[] = [
   { x: 440, y: 20, size: 34, rotate: 0, el: <Star /> },
 ];
 
+// --- Sparkles: now and then a single logo brightens for a moment ---
+//
+// A <pattern> repeats one identical tile, so its motifs can't twinkle one by
+// one. Instead, a few dozen copies of single motifs sit exactly on top of the
+// pattern, invisible until their turn. Only their opacity animates (see
+// .lr-sparkle in globals.css), so the GPU does the work and nothing is
+// repainted. Positions and timings come from a fixed seed, so the server and
+// browser render the same thing.
+
+function seeded(seed: number) {
+  // mulberry32: tiny, fast, good enough for decoration
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const COLUMNS = 4; // covers screens up to 1920 px wide
+const ROWS = 5; // and pages up to 2400 px tall
+// Columns past the screen's width are hidden on narrower screens, so their
+// animations don't run for nothing.
+const HIDE_COLUMN = [
+  "",
+  "max-[480px]:hidden",
+  "max-[960px]:hidden",
+  "max-[1440px]:hidden",
+];
+
+const SPARKLES = (() => {
+  const rng = seeded(1969);
+  const sites = [];
+  for (let row = 0; row < ROWS; row++)
+    for (let col = 0; col < COLUMNS; col++)
+      for (const motif of MOTIFS) sites.push({ row, col, motif });
+  // Pick roughly one in eight motifs to ever sparkle.
+  return sites
+    .filter(() => rng() < 0.13)
+    .map(({ row, col, motif }) => ({
+      motif,
+      col,
+      left: col * TILE + motif.x,
+      top: row * TILE + motif.y,
+      duration: 9 + rng() * 14, // s: how often this one sparkles
+      delay: -rng() * 23, // start somewhere in its cycle
+    }));
+})();
+
+/** A tiny four-point glint, drawn at a motif's upper right edge. */
+function Glint() {
+  return (
+    <path
+      d="M88 4 L91 13 L100 16 L91 19 L88 28 L85 19 L76 16 L85 13 Z"
+      fill="var(--wallpaper-glint)"
+    />
+  );
+}
+
 export function PeaceWallpaper({
   color,
   background,
+  sparkle,
+  glint,
 }: {
   /** Motif color: just a shade off the background. */
   color: string;
   /** The page background, used for cut-outs inside motifs. */
   background: string;
+  /** A motif's color at the peak of its sparkle: a shade brighter. */
+  sparkle?: string;
+  /** Color of the small glint that flashes with the sparkle. */
+  glint?: string;
 }) {
   return (
-    <svg
+    <div
       aria-hidden="true"
-      focusable="false"
-      className="pointer-events-none absolute inset-0 h-full w-full"
-      style={{ color, ["--wallpaper-bg" as string]: background }}
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      style={
+        {
+          "--wallpaper-bg": background,
+          "--wallpaper-glint": glint ?? "transparent",
+        } as React.CSSProperties
+      }
     >
-      <defs>
-        <pattern
-          id="peace-wallpaper"
-          width={TILE}
-          height={TILE}
-          patternUnits="userSpaceOnUse"
-        >
-          {MOTIFS.map((m, i) => (
-            <g
-              key={i}
-              transform={`translate(${m.x} ${m.y}) rotate(${m.rotate} ${m.size / 2} ${m.size / 2}) scale(${m.size / 100})`}
-            >
-              {m.el}
-            </g>
-          ))}
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#peace-wallpaper)" />
-    </svg>
+      <svg
+        focusable="false"
+        className="absolute inset-0 h-full w-full"
+        style={{ color }}
+      >
+        <defs>
+          <pattern
+            id="peace-wallpaper"
+            width={TILE}
+            height={TILE}
+            patternUnits="userSpaceOnUse"
+          >
+            {MOTIFS.map((m, i) => (
+              <g
+                key={i}
+                transform={`translate(${m.x} ${m.y}) rotate(${m.rotate} ${m.size / 2} ${m.size / 2}) scale(${m.size / 100})`}
+              >
+                {m.el}
+              </g>
+            ))}
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#peace-wallpaper)" />
+      </svg>
+
+      {sparkle &&
+        SPARKLES.map((s, i) => (
+          <svg
+            key={i}
+            focusable="false"
+            viewBox="0 0 100 100"
+            overflow="visible"
+            className={`lr-sparkle absolute ${HIDE_COLUMN[s.col]}`}
+            style={{
+              left: s.left,
+              top: s.top,
+              width: s.motif.size,
+              height: s.motif.size,
+              color: sparkle,
+              transform: `rotate(${s.motif.rotate}deg)`,
+              animationDuration: `${s.duration.toFixed(1)}s`,
+              animationDelay: `${s.delay.toFixed(1)}s`,
+            }}
+          >
+            {s.motif.el}
+            <Glint />
+          </svg>
+        ))}
+    </div>
   );
 }

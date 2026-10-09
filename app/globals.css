@@ -141,3 +141,34 @@ body {
     animation: none;
   }
 }
+
+/* ---- Landing page wallpaper: a logo sparkles now and then ----
+   Mostly invisible; a quick, soft swell of opacity near the end of each
+   cycle. Opacity only, so it is composited on the GPU. */
+.lr-sparkle {
+  opacity: 0;
+  animation-name: lr-sparkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes lr-sparkle {
+  0%,
+  84% {
+    opacity: 0;
+  }
+  91% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+[data-motion="paused"] .lr-sparkle {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lr-sparkle {
+    animation: none;
+    opacity: 0;
+  }
+}

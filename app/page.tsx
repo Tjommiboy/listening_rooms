@@ -10,7 +10,12 @@ export default async function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-night text-cream">
       {/* Tone-on-tone peace wallpaper: only visible if you look for it. */}
-      <PeaceWallpaper color="#212c28" background="#1d2825" />
+      <PeaceWallpaper
+        color="#212c28"
+        background="#1d2825"
+        sparkle="#2b3934"
+        glint="rgba(248, 240, 231, 0.28)"
+      />
       <div className="relative">
         <Navigation dark />
         <section className="mx-auto max-w-6xl px-5 pb-28 pt-24 md:pb-44 md:pt-40">
