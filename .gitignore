@@ -8,3 +8,9 @@ node_modules/
 .wrangler/
 .open-next/
 .dev.vars*
+
+# macOS folder metadata
+.DS_Store
+
+# Screenshots and previews made while working (kept in ~/Workspace/claude-outputs)
+Claude outputs/

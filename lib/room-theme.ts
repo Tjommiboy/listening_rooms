@@ -228,6 +228,14 @@ export function parseTheme(input: unknown): RoomTheme {
 
 export const MAX_LINKS = 6;
 export const MAX_BIO = 4000;
+export const MAX_BAND_NAME = 80;
+
+/** A band name as stored: trimmed, inner whitespace collapsed, capped. */
+export function cleanBandName(value: unknown) {
+  return typeof value === "string"
+    ? value.replace(/\s+/g, " ").trim().slice(0, MAX_BAND_NAME)
+    : "";
+}
 export const MAX_TAGLINE = 140;
 
 /** Only http(s) links with a short label are kept. */

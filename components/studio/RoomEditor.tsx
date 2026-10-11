@@ -24,6 +24,7 @@ import {
   shadowCss,
   textBackgrounds,
   FONTS,
+  MAX_BAND_NAME,
   MAX_BIO,
   MAX_LINKS,
   MAX_TAGLINE,
@@ -84,6 +85,7 @@ export function RoomEditor({
 }) {
   const all = useT();
   const t = all.editor;
+  const [name, setName] = useState(bandName);
   const [tagline, setTagline] = useState(initial.tagline);
   const [bio, setBio] = useState(initial.bio);
   const [theme, setTheme] = useState<RoomTheme>(initial.theme);
@@ -119,10 +121,11 @@ export function RoomEditor({
     const response = await fetch("/api/studio/room", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tagline, bio, theme, links }),
+      body: JSON.stringify({ name, tagline, bio, theme, links }),
     });
     const data = (await response.json().catch(() => ({}))) as {
       error?: string;
+      name?: string;
       links?: RoomLink[];
     };
     if (!response.ok) {
@@ -132,6 +135,7 @@ export function RoomEditor({
     }
     // The server drops invalid links; show what was actually saved.
     if (data.links) setLinks(data.links);
+    if (data.name) setName(data.name);
     setStatus("saved");
   }
 
@@ -246,6 +250,20 @@ export function RoomEditor({
         </Section>
 
         <Section title={t.sectionProfile}>
+          <label className={label} htmlFor="band-name">
+            {t.bandName}
+          </label>
+          <input
+            id="band-name"
+            value={name}
+            required
+            maxLength={MAX_BAND_NAME}
+            onChange={(e) => {
+              setName(e.target.value);
+              touch();
+            }}
+            className={`${field} mb-5`}
+          />
           <ImageField
             label={t.avatar}
             url={images.avatar}
@@ -760,7 +778,7 @@ export function RoomEditor({
         </p>
         <div className="h-[75vh] overflow-y-auto rounded-xl border border-sand shadow-xl dark:border-slate/40">
           <RoomView
-            name={bandName}
+            name={name.trim() || bandName}
             profile={previewProfile}
             t={all.room}
             fixedBackground={false}

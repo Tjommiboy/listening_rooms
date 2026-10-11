@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getT } from "@/lib/i18n/server";
 import { getBandByOwner, type Band } from "@/lib/access";
 import { getEnv, newId } from "@/lib/cf";
+import { cleanBandName } from "@/lib/room-theme";
 import { getCurrentUser } from "@/lib/session";
 import { ensureBandBucket } from "@/lib/storage";
 
@@ -26,8 +27,7 @@ export async function POST(request: NextRequest) {
     name?: unknown;
     slug?: unknown;
   };
-  const name =
-    typeof body.name === "string" ? body.name.trim().slice(0, 80) : "";
+  const name = cleanBandName(body.name);
   const slug =
     typeof body.slug === "string" ? body.slug.trim().toLowerCase() : "";
   if (!name)

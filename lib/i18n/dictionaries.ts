@@ -214,6 +214,7 @@ const nb = {
     randomizeKeepsPicture:
       "Bakgrunnen beholdes fordi du har lastet opp et bakgrunnsbilde.",
     undo: "Angre",
+    bandName: "Bandnavn",
     tagline: "Kort tekst under navnet",
     taglinePlaceholder: "f.eks. «Støyrock fra Bergen siden 2019»",
     bio: "Om bandet",
@@ -721,6 +722,7 @@ const en: Dictionary = {
     randomizeKeepsPicture:
       "The background is kept because you have uploaded a background picture.",
     undo: "Undo",
+    bandName: "Band name",
     tagline: "Short line under the name",
     taglinePlaceholder: "e.g. “Noise rock from Bergen since 2019”",
     bio: "About the band",
