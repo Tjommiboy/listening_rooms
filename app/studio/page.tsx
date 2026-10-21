@@ -4,28 +4,38 @@ import { CreateBandForm } from "@/components/studio/CreateBandForm";
 import { StatsPanel } from "@/components/studio/StatsPanel";
 import { Library } from "@/components/studio/Library";
 import { SubscribeButton } from "@/components/SubscribeButton";
+import { StripeConnectPanel } from "@/components/studio/StripeConnectPanel";
 import { bandPlanActive, getBandByOwner } from "@/lib/access";
 import { isAdmin } from "@/lib/admin";
+import { getBandState } from "@/lib/billing";
 import { listAlbums, listBooklets } from "@/lib/albums";
 import { ARTIST_PLAN_PRICE_KR } from "@/lib/pricing";
 import { getT } from "@/lib/i18n/server";
 import { currentMonth } from "@/lib/reports";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, paymentProvider } from "@/lib/session";
+import { refreshBandStripe } from "@/lib/stripe-sync";
+import { stripeEnabled } from "@/lib/stripe";
 import { QUOTA_BYTES, storageUsed } from "@/lib/storage";
+import { hasConfirmedRights } from "@/lib/rights";
 import { listTracks } from "@/lib/tracks";
 
 export default async function StudioPage() {
   const [user, { studio: t }] = await Promise.all([getCurrentUser(), getT()]);
-  const band = user ? await getBandByOwner(user.id) : null;
-  const [planActive, tracks, used, albums, booklets] = band
+  const found = user ? await getBandByOwner(user.id) : null;
+  // Back from Stripe onboarding (or still waiting): ask Stripe for the status.
+  const band = found ? await refreshBandStripe(found) : null;
+  const [planActive, state, tracks, used, albums, booklets] = band
     ? await Promise.all([
         bandPlanActive(band.id),
-        listTracks(band.id),
+        getBandState(band.id),
+        listTracks(band.id, { includeDisabled: true }),
         storageUsed(band.id),
         listAlbums(band.id),
         listBooklets(band.id),
       ])
-    : [false, [], { stored: 0, reserved: 0 }, [], {}];
+    : [false, "trial" as const, [], { stored: 0, reserved: 0 }, [], {}];
+
+  const rightsConfirmed = band ? await hasConfirmedRights(band.id) : false;
 
   return (
     <main className="min-h-screen bg-paper dark:bg-night">
@@ -53,6 +63,30 @@ export default async function StudioPage() {
         )}
 
         {user && !band && <CreateBandForm />}
+
+        {band?.disabled_at && (
+          <div
+            role="alert"
+            className="mt-8 max-w-xl rounded-xl border-2 border-red-700 bg-red-50 p-5 text-ink dark:border-coral dark:bg-ink dark:text-cream"
+          >
+            <strong className="block text-lg">{t.disabledTitle}</strong>
+            <p className="mt-1 text-sm leading-relaxed">{t.disabledText}</p>
+          </div>
+        )}
+
+        {band && (state === "locked" || state === "closed") && (
+          <div
+            role="alert"
+            className="mt-8 max-w-xl rounded-xl border-2 border-red-700 bg-red-50 p-5 text-ink dark:border-coral dark:bg-ink dark:text-cream"
+          >
+            <strong className="block text-lg">
+              {state === "locked" ? t.lockedTitle : t.closedTitle}
+            </strong>
+            <p className="mt-1 text-sm leading-relaxed">
+              {state === "locked" ? t.lockedText : t.closedText}
+            </p>
+          </div>
+        )}
 
         {band && (
           <>
@@ -85,6 +119,7 @@ export default async function StudioPage() {
             <div className="mt-12 grid gap-6 md:grid-cols-[1fr_300px]">
               <Library
                 canUpload={planActive}
+                rightsConfirmed={rightsConfirmed}
                 initialTracks={tracks}
                 initialAlbums={albums}
                 initialBooklets={booklets}
@@ -104,9 +139,20 @@ export default async function StudioPage() {
                 <p className="mt-4 text-sm leading-relaxed text-fog">
                   {t.planText}
                 </p>
-                <SubscribeButton plan signedIn hasAccess={planActive} />
+                <SubscribeButton
+                  plan
+                  signedIn
+                  hasAccess={planActive}
+                  provider={user ? paymentProvider(user) : "vipps"}
+                />
               </div>
             </div>
+            {stripeEnabled() && (
+              <StripeConnectPanel
+                connected={Boolean(band.stripe_account_id)}
+                ready={Boolean(band.stripe_charges_enabled)}
+              />
+            )}
             <StatsPanel currentMonth={currentMonth()} isAdmin={isAdmin(user)} />
           </>
         )}

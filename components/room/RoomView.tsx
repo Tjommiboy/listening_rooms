@@ -29,6 +29,7 @@ export function RoomView({
   player,
   membership,
   ownerNote,
+  chat,
   fixedBackground = true,
 }: {
   name: string;
@@ -38,6 +39,8 @@ export function RoomView({
   player: ReactNode;
   membership: ReactNode;
   ownerNote?: ReactNode;
+  /** The room's chat (members only); left out in the editor preview. */
+  chat?: ReactNode;
   /** The preview scrolls inside a box, where a fixed background looks odd. */
   fixedBackground?: boolean;
 }) {
@@ -167,6 +170,12 @@ export function RoomView({
     </Panel>
   ) : null;
 
+  const chatPanel = chat ? (
+    <Panel title={t.chatTitle} heading={heading}>
+      {chat}
+    </Panel>
+  ) : null;
+
   const membershipPanel = (
     <Panel title={t.membershipEyebrow} heading={heading}>
       {membership}
@@ -212,6 +221,7 @@ export function RoomView({
           {player}
           {ownerNote}
           {membershipPanel}
+          {chatPanel}
           {about}
           {links}
         </div>
@@ -225,11 +235,14 @@ export function RoomView({
               <div className="order-3 md:order-none">{ownerNote}</div>
             )}
             <div className="order-4 md:order-none">{membershipPanel}</div>
-            {links && <div className="order-6 md:order-none">{links}</div>}
+            {links && <div className="order-7 md:order-none">{links}</div>}
           </aside>
           <div className="contents min-w-0 md:block md:space-y-6">
             <div className="order-2 min-w-0 md:order-none">{player}</div>
-            {about && <div className="order-5 md:order-none">{about}</div>}
+            {chatPanel && (
+              <div className="order-5 min-w-0 md:order-none">{chatPanel}</div>
+            )}
+            {about && <div className="order-6 md:order-none">{about}</div>}
           </div>
         </div>
       )}

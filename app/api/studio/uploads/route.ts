@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getT } from "@/lib/i18n/server";
 import { getBucketDriver } from "@/lib/band-buckets";
 import { getEnv, newId } from "@/lib/cf";
+import { hasConfirmedRights } from "@/lib/rights";
 import {
   MAX_FILE_BYTES,
   PART_SIZE,
@@ -18,6 +19,11 @@ export async function POST(request: NextRequest) {
   const ctx = await requireBandOwner({ needsPlan: true });
   if (!ctx.ok) return ctx.response;
   const { band } = ctx;
+  if (!(await hasConfirmedRights(band.id)))
+    return NextResponse.json(
+      { error: (await getT()).errors.rightsRequired },
+      { status: 403 },
+    );
 
   const body = (await request.json().catch(() => ({}))) as {
     title?: unknown;

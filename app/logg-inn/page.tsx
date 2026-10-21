@@ -8,12 +8,18 @@ import { getCurrentUser } from "@/lib/session";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; feil?: string }>;
+  searchParams: Promise<{
+    next?: string;
+    feil?: string;
+    sendt?: string;
+    lenke?: string;
+  }>;
 }) {
-  const { next: rawNext, feil } = await searchParams;
+  const { next: rawNext, feil, sendt, lenke } = await searchParams;
   const next = safeNext(rawNext);
   if (await getCurrentUser()) redirect(next);
-  const t = (await getT()).login;
+  const all = await getT();
+  const t = all.login;
 
   return (
     <main className="min-h-screen bg-paper dark:bg-night">
@@ -34,6 +40,62 @@ export default async function LoginPage({
         >
           {t.withVipps}
         </a>
+        <section className="mt-12 border-t border-sand pt-8 dark:border-slate/40">
+          <p className="text-xs font-bold tracking-[.16em] text-pine dark:text-clay">
+            {t.emailEyebrow}
+          </p>
+          <p className="mt-2 text-sm text-moss dark:text-stone">
+            {t.emailIntro}
+          </p>
+          {sendt ? (
+            <p role="status" className="mt-5 text-sm leading-relaxed">
+              {t.emailSent(sendt)}
+              {devLoginEnabled() && lenke?.startsWith("http") && (
+                <>
+                  {" "}
+                  <a className="font-bold underline" href={lenke}>
+                    {t.devLink}
+                  </a>
+                </>
+              )}
+            </p>
+          ) : (
+            <form method="post" action="/api/auth/email/start" className="mt-5">
+              <input type="hidden" name="next" value={next} />
+              <label className="block text-sm font-bold" htmlFor="email">
+                {t.emailLabel}
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                maxLength={254}
+                className="mt-2 w-full rounded border border-sand bg-white px-3 py-2 text-ink dark:border-slate/40"
+              />
+              {feil === "epost" && (
+                <p
+                  role="alert"
+                  className="mt-2 text-sm text-red-700 dark:text-coral"
+                >
+                  {all.errors.emailInvalid}
+                </p>
+              )}
+              <button className="mt-4 w-full bg-ink py-3 font-bold text-paper dark:bg-cream dark:text-ink">
+                {t.emailSubmit}
+              </button>
+            </form>
+          )}
+          {feil === "lenke" && (
+            <p
+              role="alert"
+              className="mt-4 text-sm text-red-700 dark:text-coral"
+            >
+              {t.emailFailed}
+            </p>
+          )}
+        </section>
         {devLoginEnabled() && (
           <form
             method="post"

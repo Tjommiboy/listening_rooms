@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SearchBox } from "@/components/SearchBox";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { isAdmin } from "@/lib/admin";
 import { getT } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/session";
 
@@ -28,9 +30,13 @@ export async function Navigation({
       >
         LISTENING ROOMS
       </Link>
-      <div className="flex items-center gap-4 whitespace-nowrap text-xs font-bold md:gap-5">
+      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 whitespace-nowrap text-xs font-bold md:gap-x-5">
+        <SearchBox />
+        <Link href="/oppdag">{t.nav.discover}</Link>
         <Link href="/artists">{t.nav.forBands}</Link>
         <Link href="/studio">{t.nav.studio}</Link>
+        {user && <Link href="/konto">{t.nav.account}</Link>}
+        {isAdmin(user) && <Link href="/admin/rapporter">{t.nav.admin}</Link>}
         {user ? (
           <form method="post" action="/api/auth/logout">
             <button title={user.name ?? undefined}>{t.nav.logout}</button>

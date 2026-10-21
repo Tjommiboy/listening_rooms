@@ -9,7 +9,7 @@ import { requireBandOwner } from "@/lib/storage";
 
 // Listening stats and TONO estimate for the signed-in band, for one month.
 export async function GET(request: NextRequest) {
-  const ctx = await requireBandOwner();
+  const ctx = await requireBandOwner({ readOnly: true });
   if (!ctx.ok) return ctx.response;
   const month = request.nextUrl.searchParams.get("month") ?? currentMonth();
   if (!monthRange(month))

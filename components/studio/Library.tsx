@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLocale, useT } from "@/components/I18nProvider";
 import type { Album, Booklet } from "@/lib/albums";
 import { BookletEditor } from "@/components/studio/BookletEditor";
+import { RightsDeclaration } from "@/components/studio/RightsDeclaration";
 import { formatNumber } from "@/lib/i18n/dictionaries";
 import {
   api,
@@ -17,6 +18,8 @@ type Track = {
   title: string;
   size_bytes: number;
   writers?: string | null;
+  /** Set when Listening Rooms switched the song off. */
+  disabled_at?: number | null;
 };
 type Progress = { name: string; sent: number; total: number; error?: string };
 
@@ -26,6 +29,7 @@ type Progress = { name: string; sent: number; total: number; error?: string };
  */
 export function Library({
   canUpload,
+  rightsConfirmed,
   initialTracks,
   initialAlbums,
   initialBooklets,
@@ -33,6 +37,8 @@ export function Library({
   quotaBytes,
 }: {
   canUpload: boolean;
+  /** The owner has confirmed the upload declaration. */
+  rightsConfirmed: boolean;
   initialTracks: Track[];
   initialAlbums: Album[];
   initialBooklets: Record<string, Booklet>;
@@ -46,6 +52,7 @@ export function Library({
   const gb = (bytes: number) => formatNumber(locale, bytes / 1024 ** 3, 2);
   const mb = (bytes: number) => formatNumber(locale, bytes / 1024 ** 2, 1);
 
+  const [rightsOk, setRightsOk] = useState(rightsConfirmed);
   const [tracks, setTracks] = useState(initialTracks);
   const [albums, setAlbums] = useState(initialAlbums);
   const [used, setUsed] = useState(usedBytes);
@@ -150,77 +157,83 @@ export function Library({
   return (
     <div>
       {/* ---------- Upload ---------- */}
-      <div
-        role="tablist"
-        className="mb-3 inline-flex overflow-hidden rounded-full border border-sand dark:border-slate/40"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "songs"}
-          onClick={() => setMode("songs")}
-          className={tab(mode === "songs")}
-        >
-          {l.modeSongs}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "album"}
-          onClick={() => setMode("album")}
-          className={tab(mode === "album")}
-        >
-          {l.modeAlbum}
-        </button>
-      </div>
+      {canUpload && !rightsOk ? (
+        <RightsDeclaration onConfirmed={() => setRightsOk(true)} />
+      ) : (
+        <>
+          <div
+            role="tablist"
+            className="mb-3 inline-flex overflow-hidden rounded-full border border-sand dark:border-slate/40"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "songs"}
+              onClick={() => setMode("songs")}
+              className={tab(mode === "songs")}
+            >
+              {l.modeSongs}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "album"}
+              onClick={() => setMode("album")}
+              className={tab(mode === "album")}
+            >
+              {l.modeAlbum}
+            </button>
+          </div>
 
-      {mode === "album" && (
-        <label className="mb-3 block text-sm font-bold">
-          {l.albumTitle}
-          <input
-            value={albumTitle}
-            onChange={(e) => setAlbumTitle(e.target.value)}
-            maxLength={120}
-            placeholder={l.albumTitlePlaceholder}
-            className="mt-1 w-full rounded border border-sand bg-white px-3 py-2 font-normal text-ink dark:border-slate/40"
-          />
-        </label>
+          {mode === "album" && (
+            <label className="mb-3 block text-sm font-bold">
+              {l.albumTitle}
+              <input
+                value={albumTitle}
+                onChange={(e) => setAlbumTitle(e.target.value)}
+                maxLength={120}
+                placeholder={l.albumTitlePlaceholder}
+                className="mt-1 w-full rounded border border-sand bg-white px-3 py-2 font-normal text-ink dark:border-slate/40"
+              />
+            </label>
+          )}
+
+          <label
+            aria-disabled={disabled}
+            className={`block rounded-xl border-2 border-dashed border-fern bg-sage p-10 text-center dark:border-slate/40 dark:bg-ink ${!disabled ? "cursor-pointer hover:border-pine focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-pine dark:hover:border-clay dark:focus-within:outline-clay" : "cursor-not-allowed opacity-60"}`}
+          >
+            <input
+              className="sr-only"
+              type="file"
+              accept="audio/*"
+              multiple
+              disabled={disabled}
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                event.target.value = "";
+                if (!files.length) return;
+                if (mode === "album") void uploadAlbum(files);
+                else void uploadAll(files, false);
+              }}
+            />
+            <span aria-hidden="true" className="text-4xl">
+              {mode === "album" ? "💿" : "↑"}
+            </span>
+            <strong className="mt-4 block">
+              {!canUpload
+                ? t.activatePlan
+                : mode === "album"
+                  ? l.chooseAlbumFiles
+                  : t.upload}
+            </strong>
+            <span className="mt-2 block text-sm text-moss dark:text-stone">
+              {mode === "album"
+                ? l.albumFilesHint
+                : t.usage(gb(used), gb(quotaBytes))}
+            </span>
+          </label>
+        </>
       )}
-
-      <label
-        aria-disabled={disabled}
-        className={`block rounded-xl border-2 border-dashed border-fern bg-sage p-10 text-center dark:border-slate/40 dark:bg-ink ${!disabled ? "cursor-pointer hover:border-pine focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-pine dark:hover:border-clay dark:focus-within:outline-clay" : "cursor-not-allowed opacity-60"}`}
-      >
-        <input
-          className="sr-only"
-          type="file"
-          accept="audio/*"
-          multiple
-          disabled={disabled}
-          onChange={(event) => {
-            const files = Array.from(event.target.files ?? []);
-            event.target.value = "";
-            if (!files.length) return;
-            if (mode === "album") void uploadAlbum(files);
-            else void uploadAll(files, false);
-          }}
-        />
-        <span aria-hidden="true" className="text-4xl">
-          {mode === "album" ? "💿" : "↑"}
-        </span>
-        <strong className="mt-4 block">
-          {!canUpload
-            ? t.activatePlan
-            : mode === "album"
-              ? l.chooseAlbumFiles
-              : t.upload}
-        </strong>
-        <span className="mt-2 block text-sm text-moss dark:text-stone">
-          {mode === "album"
-            ? l.albumFilesHint
-            : t.usage(gb(used), gb(quotaBytes))}
-        </span>
-      </label>
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-700 dark:text-coral">
           {error}
@@ -351,7 +364,14 @@ function SongRow({
 
   return (
     <li className="flex items-center justify-between gap-4 py-3">
-      <span className="truncate">{track.title}</span>
+      <span className="truncate">
+        {track.title}
+        {track.disabled_at && (
+          <span className="ml-2 text-sm font-bold text-red-700 dark:text-coral">
+            ({l.trackDisabled})
+          </span>
+        )}
+      </span>
       <span className="flex shrink-0 items-center gap-4 text-sm text-moss dark:text-stone">
         {size}
         <button onClick={() => setEditing(true)} className="underline">

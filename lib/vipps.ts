@@ -8,6 +8,16 @@ const BASE_URL =
     ? "https://api.vipps.no"
     : "https://apitest.vipps.no";
 
+/**
+ * Local testing only: VIPPS_FAKE=true answers charge and stop calls without
+ * contacting Vipps. Ignored in production.
+ */
+export function vippsFake() {
+  return (
+    process.env.VIPPS_FAKE === "true" && process.env.VIPPS_ENV !== "production"
+  );
+}
+
 function env(name: string) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} er ikke satt.`);
@@ -63,7 +73,9 @@ async function vippsFetch<T>(
   });
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    throw new Error(`Vipps ${init.method} ${path} failed (${response.status}): ${detail}`);
+    throw new Error(
+      `Vipps ${init.method} ${path} failed (${response.status}): ${detail}`,
+    );
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
@@ -113,31 +125,38 @@ export function getAgreement(agreementId: string) {
 }
 
 export function stopAgreement(agreementId: string, idempotencyKey: string) {
+  if (vippsFake()) return Promise.resolve();
   return vippsFetch<void>(
     `/recurring/v3/agreements/${encodeURIComponent(agreementId)}`,
     { method: "PATCH", body: { status: "STOPPED" }, idempotencyKey },
   );
 }
 
-/** Schedules next month's charge. `due` must be at least one day ahead (YYYY-MM-DD). */
+/**
+ * Schedules a charge. `due` must be at least one day ahead (YYYY-MM-DD).
+ * Vipps tries on the due date and then retries for `retryDays` days.
+ */
 export function createCharge(input: {
   agreementId: string;
-  amountKr: number;
+  amountOre: number;
   description: string;
   due: string;
+  retryDays: number;
   idempotencyKey: string;
 }) {
+  if (vippsFake())
+    return Promise.resolve({ chargeId: `fake_${input.idempotencyKey}` });
   return vippsFetch<{ chargeId: string }>(
     `/recurring/v3/agreements/${encodeURIComponent(input.agreementId)}/charges`,
     {
       method: "POST",
       idempotencyKey: input.idempotencyKey,
       body: {
-        amount: Math.round(input.amountKr * 100),
+        amount: input.amountOre,
         transactionType: "DIRECT_CAPTURE",
         description: input.description,
         due: input.due,
-        retryDays: 5,
+        retryDays: input.retryDays,
         type: "RECURRING",
       },
     },

@@ -13,7 +13,7 @@ export async function GET(
   const { imageId } = await params;
   const { DB } = await getEnv();
   const row = await DB.prepare(
-    `SELECT i.image_key, b.id, b.slug, b.name, b.owner_id, b.member_price_kr, b.bucket_name
+    `SELECT i.image_key, b.id, b.slug, b.name, b.owner_id, b.member_price_kr, b.bucket_name, b.disabled_at
        FROM album_images i
        JOIN albums a ON a.id = i.album_id
        JOIN bands b ON b.id = a.band_id

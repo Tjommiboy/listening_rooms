@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getT } from "@/lib/i18n/server";
 import { bandPlanActive, getBandByOwner, type Band } from "@/lib/access";
+import { getBandState } from "@/lib/billing";
 import { bucketNameFor, getBucketDriver } from "@/lib/band-buckets";
 import { getEnv } from "@/lib/cf";
 import { ARTIST_STORAGE_GB } from "@/lib/pricing";
@@ -57,9 +58,13 @@ export async function storageUsed(bandId: string) {
 type OwnerContext =
   { ok: true; user: User; band: Band } | { ok: false; response: NextResponse };
 
-/** The signed-in user and the band they own, or an error response. */
+/**
+ * The signed-in user and the band they own, or an error response.
+ * A band whose plan has lapsed (locked or closed) can only read, not change
+ * anything, until it pays again; pass `readOnly` for routes that only read.
+ */
 export async function requireBandOwner(
-  opts: { needsPlan?: boolean } = {},
+  opts: { needsPlan?: boolean; readOnly?: boolean } = {},
 ): Promise<OwnerContext> {
   const user = await getCurrentUser();
   if (!user)
@@ -79,6 +84,25 @@ export async function requireBandOwner(
         { status: 403 },
       ),
     };
+  if (!opts.readOnly) {
+    if (band.disabled_at)
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: (await getT()).errors.bandDisabled },
+          { status: 403 },
+        ),
+      };
+    const state = await getBandState(band.id);
+    if (state === "locked" || state === "closed")
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: (await getT()).errors.studioLocked },
+          { status: 402 },
+        ),
+      };
+  }
   if (opts.needsPlan && !(await bandPlanActive(band.id)))
     return {
       ok: false,

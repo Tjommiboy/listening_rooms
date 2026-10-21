@@ -11,7 +11,8 @@ export async function GET(
   const { DB } = await getEnv();
   const row = await DB.prepare(
     `SELECT a.cover_key, b.bucket_name FROM albums a
-       JOIN bands b ON b.id = a.band_id WHERE a.id = ?1`,
+       JOIN bands b ON b.id = a.band_id
+      WHERE a.id = ?1 AND b.disabled_at IS NULL`,
   )
     .bind(albumId)
     .first<{ cover_key: string | null; bucket_name: string | null }>();

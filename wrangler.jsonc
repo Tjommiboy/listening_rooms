@@ -1,7 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "listening-rooms",
-  "main": ".open-next/worker.js",
+  // The Next.js app plus the daily billing job (custom-worker.ts).
+  "main": "custom-worker.ts",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
@@ -32,5 +33,7 @@
       "bucket_name": "listening-rooms-dev-media",
     },
   ],
+  // Daily at 04:00 UTC (05:00/06:00 in Norway): create the month's charges.
+  "triggers": { "crons": ["0 4 * * *"] },
   "observability": { "enabled": true },
 }

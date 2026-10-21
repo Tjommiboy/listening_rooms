@@ -7,7 +7,8 @@ import { useT } from "@/components/I18nProvider";
 type State = "idle" | "loading" | "active" | "pending" | "error";
 
 /**
- * Starts a Vipps agreement and checks it when the user comes back.
+ * Starts a Vipps agreement (Norway) or a Stripe card subscription (everyone
+ * else) and checks it when the user comes back.
  * Fans: <SubscribeButton slug="..." />. Bands: <SubscribeButton plan />.
  */
 export function SubscribeButton({
@@ -17,6 +18,7 @@ export function SubscribeButton({
   hasAccess,
   demoMembership = false,
   label,
+  provider = "vipps",
 }: {
   slug?: string;
   plan?: boolean;
@@ -24,6 +26,8 @@ export function SubscribeButton({
   hasAccess: boolean;
   demoMembership?: boolean;
   label?: string;
+  /** Vipps for Vipps Login users, Stripe for email-login users. */
+  provider?: "vipps" | "stripe";
 }) {
   const router = useRouter();
   const t = useT().subscribe;
@@ -31,14 +35,21 @@ export function SubscribeButton({
   const [message, setMessage] = useState("");
   const query = plan ? "plan=band" : `slug=${encodeURIComponent(slug ?? "")}`;
 
-  // After approving in the Vipps app, the user lands back with ?vipps=retur.
+  // After approving in Vipps (?vipps=retur) or paying in Stripe Checkout
+  // (?stripe=retur&session_id=…), check the status until it is settled.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("vipps") !== "retur")
-      return;
+    const params = new URLSearchParams(window.location.search);
+    const statusUrl =
+      params.get("vipps") === "retur"
+        ? `/api/vipps/status?${query}`
+        : params.get("stripe") === "retur"
+          ? `/api/stripe/status?${query}&session_id=${encodeURIComponent(params.get("session_id") ?? "")}`
+          : null;
+    if (!statusUrl) return;
     let cancelled = false;
     let tries = 0;
     const check = () => {
-      fetch(`/api/vipps/status?${query}`)
+      fetch(statusUrl)
         .then(
           (response) =>
             response.json() as Promise<{ status?: string; error?: string }>,
@@ -93,7 +104,7 @@ export function SubscribeButton({
 
   async function subscribe() {
     const data = await post(
-      "/api/vipps/agreement",
+      provider === "stripe" ? "/api/stripe/checkout" : "/api/vipps/agreement",
       plan ? { plan: "band" } : { slug },
     );
     if (data?.url) window.location.assign(data.url);
@@ -124,15 +135,21 @@ export function SubscribeButton({
       <button
         onClick={subscribe}
         disabled={state === "loading" || state === "active"}
-        className="mt-6 w-full bg-[#ff5b24] py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+        className={`mt-6 w-full py-3 font-bold disabled:cursor-not-allowed disabled:opacity-60 ${provider === "stripe" ? "bg-[#4f3ad6] text-white" : "bg-[#ff5b24] text-white"}`}
       >
         {state === "loading"
-          ? t.opening
+          ? provider === "stripe"
+            ? t.openingCard
+            : t.opening
           : state === "active"
             ? plan
               ? t.planActive
               : t.member
-            : (label ?? (plan ? t.orderPlan : t.join))}
+            : provider === "stripe"
+              ? plan
+                ? t.orderPlanCard
+                : t.joinCard
+              : (label ?? (plan ? t.orderPlan : t.join))}
       </button>
       {demoMembership && !plan && state !== "active" && (
         <button

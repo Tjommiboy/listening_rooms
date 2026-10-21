@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
     owner_id: user.id,
     member_price_kr: 19,
     bucket_name: null,
+    stripe_account_id: null,
+    stripe_charges_enabled: 0,
   };
   try {
     await ensureBandBucket(band);

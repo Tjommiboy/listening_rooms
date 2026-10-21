@@ -30,6 +30,17 @@ function randomToken() {
     .replaceAll("=", "");
 }
 
+/** Prefix of users.vipps_sub for accounts that sign in by email link. */
+export const EMAIL_SUB_PREFIX = "email:";
+
+/**
+ * How this user pays: Vipps for people who signed in with Vipps (Norway),
+ * Stripe for people who signed in by email (everyone else).
+ */
+export function paymentProvider(user: User): "vipps" | "stripe" {
+  return user.vipps_sub.startsWith(EMAIL_SUB_PREFIX) ? "stripe" : "vipps";
+}
+
 /** Finds or creates the user for a Vipps identity (or a local dev identity). */
 export async function upsertUser(input: {
   vippsSub: string;

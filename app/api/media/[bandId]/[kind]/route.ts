@@ -17,7 +17,7 @@ export async function GET(
   const { DB } = await getEnv();
   const column = kind === "avatar" ? "avatar_key" : "background_key";
   const band = await DB.prepare(
-    `SELECT bucket_name, ${column} AS key FROM bands WHERE id = ?1`,
+    `SELECT bucket_name, ${column} AS key FROM bands WHERE id = ?1 AND disabled_at IS NULL`,
   )
     .bind(bandId)
     .first<{ bucket_name: string | null; key: string | null }>();

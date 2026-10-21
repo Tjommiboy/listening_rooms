@@ -19,7 +19,8 @@ export async function GET(
     `SELECT t.r2_key, t.content_type,
             b.id, b.slug, b.name, b.owner_id, b.member_price_kr, b.bucket_name
        FROM tracks t JOIN bands b ON b.id = t.band_id
-      WHERE t.id = ?1 AND t.deleted_at IS NULL`,
+      WHERE t.id = ?1 AND t.deleted_at IS NULL
+        AND t.disabled_at IS NULL AND b.disabled_at IS NULL`,
   )
     .bind(trackId)
     .first<Band & { r2_key: string; content_type: string }>();

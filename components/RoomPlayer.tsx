@@ -29,6 +29,8 @@ export function RoomPlayer({
   canPlay,
   autoplay = false,
   preview = false,
+  initialAlbumId,
+  initialTrackId,
 }: {
   tracks: Track[];
   /** The band's albums; fans can switch between "All songs" and an album. */
@@ -37,19 +39,37 @@ export function RoomPlayer({
   autoplay?: boolean;
   /** In the editor preview: show the player, but never load audio. */
   preview?: boolean;
+  /** Opened from search: start on this album (its first song is cued). */
+  initialAlbumId?: string;
+  /** Opened from search: cue this song in "All songs". */
+  initialTrackId?: string;
 }) {
   const all = useT();
   const t = all.player;
   const [bookletOpen, setBookletOpen] = useState(false);
-  const [albumId, setAlbumId] = useState<string | null>(null);
+  const [albumId, setAlbumId] = useState<string | null>(initialAlbumId ?? null);
   const album = albums.find((a) => a.id === albumId) ?? null;
   const byId = new Map(allTracks.map((tr) => [tr.id, tr]));
   const tracks = album
     ? album.trackIds.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []))
     : allTracks;
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(() =>
+    initialTrackId && !initialAlbumId
+      ? Math.max(
+          0,
+          allTracks.findIndex((tr) => tr.id === initialTrackId),
+        )
+      : 0,
+  );
   const [started, setStarted] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
+  const section = useRef<HTMLElement>(null);
+  const cued = Boolean(initialAlbumId || initialTrackId);
+
+  // Opened from search: bring the player into view with the hit cued up.
+  useEffect(() => {
+    if (cued) section.current?.scrollIntoView({ block: "start" });
+  }, [cued]);
   const track = tracks[current];
   const playable = canPlay && !preview;
 
@@ -70,7 +90,8 @@ export function RoomPlayer({
 
   return (
     <section
-      className={`overflow-hidden [background:var(--room-panel)] ${BOX_EFFECTS}`}
+      ref={section}
+      className={`scroll-mt-4 overflow-hidden [background:var(--room-panel)] ${BOX_EFFECTS}`}
     >
       <div className="flex items-center justify-between gap-3 [background:var(--room-accent-fill)] px-4 py-2 text-[var(--room-accent-text)]">
         <p className="text-sm font-bold uppercase tracking-[.12em]">

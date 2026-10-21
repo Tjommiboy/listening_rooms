@@ -1,4 +1,4 @@
-import { addMonth } from "@/lib/access";
+import { nextPaidUntil } from "@/lib/billing-rules";
 import { getEnv, newId } from "@/lib/cf";
 import type { AgreementStatus } from "@/lib/vipps";
 
@@ -45,12 +45,19 @@ export async function latestAgreement(
 }
 
 /**
- * Records a captured payment: the agreement is paid one month from when the
- * money was taken. The paid period only ever moves forward, so calling this
- * twice for the same charge (webhook + status check) neither gives away an
- * extra month nor logs the payment twice.
+ * Records a captured payment. A monthly renewal (one of our charges, with
+ * `periodStart`) that arrives on time continues the period seamlessly; a
+ * first payment or a late one (after retries) starts a fresh month from when
+ * the money was taken. The paid period only ever moves forward, so calling
+ * this twice for the same charge (webhook + status check) neither gives away
+ * an extra month nor logs the payment twice.
  */
-export async function markPaid(agreementId: string, capturedAt: number) {
+export async function markPaid(
+  agreementId: string,
+  capturedAt: number,
+  periodStart?: number,
+) {
+  const paidUntil = nextPaidUntil(capturedAt, periodStart);
   const { DB } = await getEnv();
   const now = Date.now();
   const extended = await DB.prepare(
@@ -61,7 +68,7 @@ export async function markPaid(agreementId: string, capturedAt: number) {
       WHERE id = ?1 AND COALESCE(paid_until, 0) < ?2
       RETURNING kind, band_id, amount_ore`,
   )
-    .bind(agreementId, addMonth(capturedAt), now)
+    .bind(agreementId, paidUntil, now)
     .first<{ kind: string; band_id: string; amount_ore: number }>();
   if (!extended) return;
   await DB.prepare(

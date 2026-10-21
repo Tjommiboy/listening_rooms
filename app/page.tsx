@@ -3,7 +3,6 @@ import { Navigation } from "@/components/Navigation";
 import { newSplashSeed, PaintSplash } from "@/components/PaintSplash";
 import { PeaceWallpaper } from "@/components/PeaceWallpaper";
 import { getT } from "@/lib/i18n/server";
-import { SAMPLE_ROOM_SLUG } from "@/lib/rooms";
 
 export default async function Home() {
   const t = (await getT()).home;
@@ -32,7 +31,7 @@ export default async function Home() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Link
-              href={`/room/${SAMPLE_ROOM_SLUG}`}
+              href="/oppdag"
               className="bg-clay px-5 py-3 font-bold text-ink"
             >
               {t.explore}
