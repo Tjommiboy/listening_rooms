@@ -11,6 +11,7 @@ import { getBandState } from "@/lib/billing";
 import { listAlbums, listBooklets } from "@/lib/albums";
 import { ARTIST_PLAN_PRICE_KR } from "@/lib/pricing";
 import { getT } from "@/lib/i18n/server";
+import { getPayoutView } from "@/lib/payout";
 import { currentMonth } from "@/lib/reports";
 import { getCurrentUser, paymentProvider } from "@/lib/session";
 import { refreshBandStripe } from "@/lib/stripe-sync";
@@ -20,7 +21,10 @@ import { hasConfirmedRights } from "@/lib/rights";
 import { listTracks } from "@/lib/tracks";
 
 export default async function StudioPage() {
-  const [user, { studio: t }] = await Promise.all([getCurrentUser(), getT()]);
+  const [user, { studio: t, payout: tp }] = await Promise.all([
+    getCurrentUser(),
+    getT(),
+  ]);
   const found = user ? await getBandByOwner(user.id) : null;
   // Back from Stripe onboarding (or still waiting): ask Stripe for the status.
   const band = found ? await refreshBandStripe(found) : null;
@@ -35,7 +39,21 @@ export default async function StudioPage() {
       ])
     : [false, "trial" as const, [], { stored: 0, reserved: 0 }, [], {}];
 
-  const rightsConfirmed = band ? await hasConfirmedRights(band.id) : false;
+  const [rightsConfirmed, payout] = band
+    ? await Promise.all([hasConfirmedRights(band.id), getPayoutView(band.id)])
+    : [false, null];
+  const viaStripe = user ? paymentProvider(user) === "stripe" : false;
+  const payoutDone = payout
+    ? [payout.steps.org, payout.steps.bank, payout.steps.vipps, payout.steps.live]
+        .filter((state) => state === "done").length
+    : 0;
+  const payoutText = viaStripe
+    ? band?.stripe_charges_enabled
+      ? tp.card.ready
+      : tp.stripeTitle
+    : payoutDone === 4
+      ? tp.card.ready
+      : tp.card.progress(payoutDone);
 
   return (
     <main className="min-h-screen bg-paper dark:bg-night">
@@ -114,6 +132,20 @@ export default async function StudioPage() {
               </span>
               <span aria-hidden="true" className="text-3xl">
                 ✎
+              </span>
+            </Link>
+            <Link
+              href="/studio/betaling"
+              className="mt-4 flex max-w-xl items-center justify-between gap-4 rounded-xl border-2 border-dashed border-pine p-5 hover:bg-sage dark:border-clay dark:hover:bg-ink"
+            >
+              <span>
+                <strong className="block text-lg">{tp.card.title}</strong>
+                <span className="text-sm text-moss dark:text-stone">
+                  {payoutText}
+                </span>
+              </span>
+              <span aria-hidden="true" className="text-3xl">
+                kr
               </span>
             </Link>
             <div className="mt-12 grid gap-6 md:grid-cols-[1fr_300px]">

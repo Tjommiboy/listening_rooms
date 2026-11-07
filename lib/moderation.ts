@@ -9,7 +9,9 @@ type Action =
   | "enable_track"
   | "disable_band"
   | "enable_band"
-  | "resolve_report";
+  | "resolve_report"
+  | "approve_live"
+  | "revoke_live";
 
 async function log(entry: {
   adminId: string;
@@ -122,6 +124,43 @@ export async function resolveReport(input: {
     bandId: row.band_id,
     reportId: input.reportId,
     reason: note,
+  });
+  return true;
+}
+
+/**
+ * Go-live approval (manual in beta). Returns false if there is no such band,
+ * or if approving a band that can't take payments yet (no Vipps sales unit
+ * and no ready Stripe account).
+ */
+export async function setLiveApproval(input: {
+  adminId: string;
+  bandId: string;
+  approved: boolean;
+  reason?: unknown;
+}) {
+  const { DB } = await getEnv();
+  const row = input.approved
+    ? await DB.prepare(
+        `UPDATE bands SET live_approved_at = ?2, live_approved_by = ?3
+          WHERE id = ?1 AND (vipps_msn IS NOT NULL OR stripe_charges_enabled = 1)
+          RETURNING id`,
+      )
+        .bind(input.bandId, Date.now(), input.adminId)
+        .first<{ id: string }>()
+    : await DB.prepare(
+        `UPDATE bands SET live_approved_at = NULL, live_approved_by = NULL
+          WHERE id = ?1 RETURNING id`,
+      )
+        .bind(input.bandId)
+        .first<{ id: string }>();
+  if (!row) return false;
+  await log({
+    adminId: input.adminId,
+    action: input.approved ? "approve_live" : "revoke_live",
+    targetId: input.bandId,
+    bandId: input.bandId,
+    reason: cleanReason(input.reason),
   });
   return true;
 }

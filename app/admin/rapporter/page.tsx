@@ -30,7 +30,10 @@ export default async function AdminReportsPage() {
     <main className="min-h-screen bg-paper dark:bg-night">
       <Navigation />
       <section className="mx-auto max-w-4xl px-5 pb-24 pt-12">
-        <p className="text-xs font-bold tracking-[.16em] text-pine dark:text-clay">
+        <Link href="/admin/godkjenning" className="text-sm font-bold underline">
+          {all.goLive.goLiveLink}
+        </Link>
+        <p className="mt-6 text-xs font-bold tracking-[.16em] text-pine dark:text-clay">
           {t.eyebrow}
         </p>
         <h1 className="serif mt-4 text-5xl tracking-[-.08em]">{t.title}</h1>

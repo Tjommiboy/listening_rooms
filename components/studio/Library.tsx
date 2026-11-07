@@ -136,6 +136,25 @@ export function Library({
     setUsed((u) => u - track.size_bytes);
   }
 
+  // Moves a song one step up or down; the whole order is saved at once.
+  async function moveTrack(index: number, delta: number) {
+    const before = tracks;
+    const next = [...tracks];
+    const [item] = next.splice(index, 1);
+    next.splice(index + delta, 0, item);
+    setTracks(next);
+    try {
+      await api("/api/studio/tracks/order", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackIds: next.map((x) => x.id) }),
+      });
+    } catch (err) {
+      setTracks(before);
+      setError(err instanceof Error ? err.message : t.error);
+    }
+  }
+
   async function renameTrack(track: Track, title: string) {
     const saved = await api<{ title: string }>(
       `/api/studio/tracks/${track.id}`,
@@ -277,10 +296,14 @@ export function Library({
           <p className="mt-5 text-moss dark:text-stone">{t.noTracks}</p>
         ) : (
           <ul className="mt-5 divide-y divide-sand dark:divide-slate/40">
-            {tracks.map((track) => (
+            {tracks.map((track, index) => (
               <SongRow
                 key={track.id}
                 track={track}
+                onMoveUp={index > 0 ? () => moveTrack(index, -1) : null}
+                onMoveDown={
+                  index < tracks.length - 1 ? () => moveTrack(index, 1) : null
+                }
                 size={`${mb(track.size_bytes)} MB`}
                 onRename={(title) => renameTrack(track, title)}
                 onDelete={() => removeTrack(track)}
@@ -306,9 +329,13 @@ function SongRow({
   size,
   onRename,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: {
   track: Track;
   size: string;
+  onMoveUp: (() => void) | null;
+  onMoveDown: (() => void) | null;
   onRename: (title: string) => Promise<void>;
   onDelete: () => void;
 }) {
@@ -374,6 +401,28 @@ function SongRow({
       </span>
       <span className="flex shrink-0 items-center gap-4 text-sm text-moss dark:text-stone">
         {size}
+        <span className="flex gap-1">
+          <button
+            type="button"
+            aria-label={l.moveUp}
+            title={l.moveUp}
+            disabled={!onMoveUp}
+            onClick={onMoveUp ?? undefined}
+            className="min-h-8 min-w-8 rounded border border-sand disabled:opacity-30 dark:border-slate/40"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            aria-label={l.moveDown}
+            title={l.moveDown}
+            disabled={!onMoveDown}
+            onClick={onMoveDown ?? undefined}
+            className="min-h-8 min-w-8 rounded border border-sand disabled:opacity-30 dark:border-slate/40"
+          >
+            ↓
+          </button>
+        </span>
         <button onClick={() => setEditing(true)} className="underline">
           {l.rename}
         </button>

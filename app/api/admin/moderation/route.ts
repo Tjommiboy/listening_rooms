@@ -4,6 +4,7 @@ import { getT } from "@/lib/i18n/server";
 import {
   resolveReport,
   setBandDisabled,
+  setLiveApproval,
   setTrackDisabled,
 } from "@/lib/moderation";
 import { getCurrentUser } from "@/lib/session";
@@ -48,6 +49,15 @@ export async function POST(request: NextRequest) {
         disabled: body.action === "disable_band",
         reason: body.reason,
         reportId,
+      });
+      break;
+    case "approve_live":
+    case "revoke_live":
+      done = await setLiveApproval({
+        adminId: user.id,
+        bandId: body.id,
+        approved: body.action === "approve_live",
+        reason: body.reason,
       });
       break;
     case "resolve_report":

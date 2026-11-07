@@ -682,6 +682,150 @@ const nb = {
     planProduct: (band: string) => `Listening Rooms bandplan: ${band}`,
     planDescription: `${ARTIST_STORAGE_GB} GB lagring og eget lytterom (${ARTIST_PLAN_PRICE_KR} kr/mnd)`,
   },
+  payout: {
+    eyebrow: "FÅ BETALT",
+    title: "Ta betalt med Vipps",
+    intro:
+      "Bandet er selger, så pengene fra fansen går rett til bandets konto. Da trenger bandet et organisasjonsnummer, en bankkonto og en egen avtale med Vipps. Vi fyller ut det vi kan – du signerer selv med BankID.",
+    back: "← Tilbake til studio",
+    stepLabel: (n: number) => `Steg ${n}`,
+    done: "Ferdig",
+    waiting: "Venter",
+    problem: "Må ordnes",
+    steps: {
+      org: "Organisasjonsnummer",
+      bank: "Bankkonto",
+      vipps: "Avtale med Vipps",
+      live: "Godkjenning",
+    },
+    org: {
+      intro:
+        "Bandet trenger et organisasjonsnummer. Et enkeltpersonforetak er gratis å registrere og er vanligvis klart etter 1–3 virkedager.",
+      label: "Organisasjonsnummer (9 siffer)",
+      check: "Sjekk og lagre",
+      checking: "Sjekker i Brønnøysundregistrene …",
+      found: (name: string, form: string) =>
+        `Registrert som ${name}${form ? ` (${form})` : ""}.`,
+      owner: (name: string) => `Innehaver eller daglig leder: ${name}`,
+      nameWarning:
+        "Navnet i registeret ligner ikke på navnet ditt. Den som signerer avtalen med Vipps, må ha rett til å signere for organisasjonen.",
+      problems: {
+        deleted: "Organisasjonen er slettet fra Enhetsregisteret.",
+        bankrupt: "Organisasjonen er konkurs.",
+        winding_up: "Organisasjonen er under avvikling.",
+      },
+      noneTitle: "Har du ikke organisasjonsnummer ennå?",
+      noneSteps: [
+        "Logg inn i Altinn med BankID og fyll ut «Samordnet registermelding» for et enkeltpersonforetak.",
+        "Foretaksnavnet må inneholde etternavnet ditt, for eksempel «Kari Nordmann Musikk».",
+        "Når du har fått organisasjonsnummeret, kommer du tilbake hit og skriver det inn.",
+      ],
+      altinnLink: "Gå til skjemaet i Altinn",
+      vatNote:
+        "Selger bandet for under 50 000 kr i året, trenger det ikke å registrere seg i Merverdiavgiftsregisteret.",
+      change: "Endre",
+    },
+    bank: {
+      intro:
+        "Vipps betaler ut til en bankkonto som tilhører organisasjonsnummeret. Spør banken din om en konto for foretaket.",
+      label: "Kontonummer (11 siffer)",
+      save: "Lagre",
+      saving: "Lagrer …",
+      saved: (last5: string) => `Kontoen som slutter på ${last5}`,
+      change: "Endre",
+      changeNote:
+        "Endrer du organisasjonsnummer eller konto, må søknaden til Vipps lages på nytt.",
+    },
+    vipps: {
+      intro:
+        "Vi fyller ut søknaden til Vipps for deg. Du sjekker opplysningene og signerer med BankID i Vipps' bedriftsportal. Deretter kontrollerer Vipps søknaden før avtalen godkjennes.",
+      start: "Start søknaden hos Vipps",
+      starting: "Fyller ut søknaden …",
+      continue: "Åpne søknaden hos Vipps",
+      again: "Lag en ny søknad",
+      expiresNote: "Lenken virker i 14 dager.",
+      status: {
+        RECEIVED: "Søknaden er klar. Åpne den og signer med BankID.",
+        MERCHANT_VIEWED:
+          "Du har åpnet søknaden, men den er ikke sendt inn ennå.",
+        ORDER_SUBMITTED:
+          "Søknaden er sendt inn, og Vipps går gjennom den. Det kan ta noen dager. Står den lenge, kan Vipps vente på at du bekrefter bankkontoen i bedriftsportalen.",
+        COMPLETED: "Godkjent av Vipps.",
+        REJECTED:
+          "Vipps avslo søknaden. Vi får ikke vite hvorfor – logg inn i Vipps' bedriftsportal for å se begrunnelsen. Rett det opp og søk på nytt.",
+        EXPIRED:
+          "Søknaden ble ikke sendt inn innen 14 dager og har gått ut. Lag en ny.",
+      },
+      msn: (msn: string) => `Bandets salgssted hos Vipps: ${msn}`,
+      needsEarlier: "Fullfør organisasjonsnummer og bankkonto først.",
+      notReady:
+        "Søknader til Vipps er ikke slått på ennå. Du kan fylle ut resten så lenge.",
+      lockedNote:
+        "Søknaden er hos Vipps, så organisasjonsnummer og bankkonto kan ikke endres her nå.",
+      refresh: "Sjekk status",
+    },
+    live: {
+      todo: "Når Vipps har godkjent avtalen, ser vi over rommet før det åpnes for betalende fans.",
+      waiting:
+        "Alt er klart fra din side. Listening Rooms ser over rommet og godkjenner det – du får beskjed.",
+      done: "Rommet er godkjent og kan ta imot betalende fans.",
+    },
+    fakeNote: "Testmodus: Vipps er simulert.",
+    vippsPurpose: (kr: number) =>
+      `Månedlig abonnement (${kr} kr/mnd) der fans får tilgang til bandets musikk i et privat lytterom på Listening Rooms. Kjøpet skjer på nett, og kunden er ikke fysisk til stede.`,
+    stripeTitle: "Kortbetaling",
+    stripeText:
+      "Du er logget inn med e-post, så bandet tar betalt med kort gjennom Stripe i stedet for Vipps.",
+    card: {
+      title: "Få betalt →",
+      progress: (done: number) => `${done} av 4 steg ferdig`,
+      ready: "Klar til å ta betalt",
+    },
+    test: {
+      title: "Vipps (test)",
+      text: "Dette står i stedet for Vipps' bedriftsportal mens Vipps er simulert. Velg hva Vipps skal svare.",
+      approve: "Godkjenn søknaden",
+      reject: "Avslå søknaden",
+    },
+    failed: "Noe gikk galt.",
+    errors: {
+      org_invalid: "Det ser ikke ut som et gyldig organisasjonsnummer.",
+      org_not_found: "Fant ikke organisasjonsnummeret i Enhetsregisteret.",
+      org_unavailable:
+        "Brønnøysundregistrene svarer ikke akkurat nå. Prøv igjen om litt.",
+      org_problem: "Organisasjonen kan ikke brukes til å ta betalt.",
+      bank_invalid: "Det ser ikke ut som et gyldig kontonummer.",
+      locked: "Søknaden er hos Vipps, så dette kan ikke endres her.",
+      missing_details: "Fullfør organisasjonsnummer og bankkonto først.",
+      vipps_not_ready: "Søknader til Vipps er ikke slått på ennå.",
+      vipps_failed:
+        "Kunne ikke lage søknaden hos Vipps. Prøv igjen om litt.",
+    },
+  },
+  goLive: {
+    eyebrow: "ADMIN",
+    title: "Godkjenning",
+    intro:
+      "Band som har begynt å sette opp betaling. Godkjenn et rom når det kan ta betalt og innholdet ser greit ut.",
+    reportsLink: "Rapporter →",
+    goLiveLink: "Godkjenning →",
+    none: "Ingen band venter.",
+    org: "Org.nr.",
+    vipps: "Vipps",
+    stripe: "Stripe",
+    plan: "Bandplan",
+    yes: "Ja",
+    no: "Nei",
+    paid: "Betalt",
+    unpaid: "Ikke betalt",
+    msn: (msn: string) => `Salgssted ${msn}`,
+    approvedAt: (date: string) => `Godkjent ${date}`,
+    disabled: "Deaktivert",
+    approve: "Godkjenn",
+    revoke: "Trekk tilbake",
+    notReady: "Kan ikke ta betalt ennå",
+    failed: "Noe gikk galt.",
+  },
   errors: {
     loginFirst: "Logg inn først.",
     roomNotFound: "Fant ikke rommet.",
@@ -1406,6 +1550,150 @@ const en: Dictionary = {
     fanDescription: (band: string) => `Monthly membership of ${band}'s room`,
     planProduct: (band: string) => `Listening Rooms band plan: ${band}`,
     planDescription: `${ARTIST_STORAGE_GB} GB storage and your own listening room (${ARTIST_PLAN_PRICE_KR} kr/month)`,
+  },
+  payout: {
+    eyebrow: "GET PAID",
+    title: "Take payments with Vipps",
+    intro:
+      "The band is the seller, so fans' money goes straight to the band's account. For that the band needs an organisation number, a bank account and its own agreement with Vipps. We fill in what we can – you sign yourself with BankID.",
+    back: "← Back to the studio",
+    stepLabel: (n: number) => `Step ${n}`,
+    done: "Done",
+    waiting: "Waiting",
+    problem: "Needs fixing",
+    steps: {
+      org: "Organisation number",
+      bank: "Bank account",
+      vipps: "Agreement with Vipps",
+      live: "Approval",
+    },
+    org: {
+      intro:
+        "The band needs an organisation number. A sole proprietorship (enkeltpersonforetak) is free to register and is usually ready in 1–3 working days.",
+      label: "Organisation number (9 digits)",
+      check: "Check and save",
+      checking: "Checking with the Brønnøysund Register Centre …",
+      found: (name: string, form: string) =>
+        `Registered as ${name}${form ? ` (${form})` : ""}.`,
+      owner: (name: string) => `Owner or general manager: ${name}`,
+      nameWarning:
+        "The name in the register doesn't look like your name. Whoever signs the agreement with Vipps must have the right to sign for the organisation.",
+      problems: {
+        deleted: "The organisation has been deleted from the register.",
+        bankrupt: "The organisation is bankrupt.",
+        winding_up: "The organisation is being wound up.",
+      },
+      noneTitle: "No organisation number yet?",
+      noneSteps: [
+        "Log in to Altinn with BankID and fill in the “Coordinated register notification” for a sole proprietorship.",
+        "The business name must include your surname, for example “Kari Nordmann Music”.",
+        "Once you have the organisation number, come back here and enter it.",
+      ],
+      altinnLink: "Go to the form in Altinn",
+      vatNote:
+        "If the band sells for less than 50,000 kr a year, it doesn't need to register for VAT.",
+      change: "Change",
+    },
+    bank: {
+      intro:
+        "Vipps pays out to a bank account that belongs to the organisation number. Ask your bank for an account for the business.",
+      label: "Account number (11 digits)",
+      save: "Save",
+      saving: "Saving …",
+      saved: (last5: string) => `The account ending in ${last5}`,
+      change: "Change",
+      changeNote:
+        "If you change the organisation number or account, the Vipps application has to be made again.",
+    },
+    vipps: {
+      intro:
+        "We fill in the Vipps application for you. You check the details and sign with BankID in the Vipps business portal. Vipps then reviews the application before the agreement is approved.",
+      start: "Start the application with Vipps",
+      starting: "Filling in the application …",
+      continue: "Open the application at Vipps",
+      again: "Make a new application",
+      expiresNote: "The link works for 14 days.",
+      status: {
+        RECEIVED: "The application is ready. Open it and sign with BankID.",
+        MERCHANT_VIEWED:
+          "You've opened the application, but it hasn't been submitted yet.",
+        ORDER_SUBMITTED:
+          "The application is submitted and Vipps is reviewing it. This can take a few days. If it takes long, Vipps may be waiting for you to confirm the bank account in the business portal.",
+        COMPLETED: "Approved by Vipps.",
+        REJECTED:
+          "Vipps rejected the application. We aren't told why – log in to the Vipps business portal to see the reason. Fix it and apply again.",
+        EXPIRED:
+          "The application wasn't submitted within 14 days and has expired. Make a new one.",
+      },
+      msn: (msn: string) => `The band's sales unit at Vipps: ${msn}`,
+      needsEarlier: "Finish the organisation number and bank account first.",
+      notReady:
+        "Vipps applications aren't switched on yet. You can fill in the rest in the meantime.",
+      lockedNote:
+        "The application is with Vipps, so the organisation number and bank account can't be changed here now.",
+      refresh: "Check status",
+    },
+    live: {
+      todo: "Once Vipps has approved the agreement, we look over the room before it opens to paying fans.",
+      waiting:
+        "Everything is ready on your side. Listening Rooms looks over the room and approves it – we'll let you know.",
+      done: "The room is approved and can take paying fans.",
+    },
+    fakeNote: "Test mode: Vipps is simulated.",
+    vippsPurpose: (kr: number) =>
+      `Månedlig abonnement (${kr} kr/mnd) der fans får tilgang til bandets musikk i et privat lytterom på Listening Rooms. Kjøpet skjer på nett, og kunden er ikke fysisk til stede.`,
+    stripeTitle: "Card payments",
+    stripeText:
+      "You're signed in by email, so the band takes card payments through Stripe instead of Vipps.",
+    card: {
+      title: "Get paid →",
+      progress: (done: number) => `${done} of 4 steps done`,
+      ready: "Ready to take payments",
+    },
+    test: {
+      title: "Vipps (test)",
+      text: "This stands in for the Vipps business portal while Vipps is simulated. Choose what Vipps should answer.",
+      approve: "Approve the application",
+      reject: "Reject the application",
+    },
+    failed: "Something went wrong.",
+    errors: {
+      org_invalid: "That doesn't look like a valid organisation number.",
+      org_not_found: "Couldn't find the organisation number in the register.",
+      org_unavailable:
+        "The Brønnøysund Register Centre isn't answering right now. Try again in a moment.",
+      org_problem: "This organisation can't be used to take payments.",
+      bank_invalid: "That doesn't look like a valid account number.",
+      locked: "The application is with Vipps, so this can't be changed here.",
+      missing_details: "Finish the organisation number and bank account first.",
+      vipps_not_ready: "Vipps applications aren't switched on yet.",
+      vipps_failed:
+        "Couldn't create the application at Vipps. Try again in a moment.",
+    },
+  },
+  goLive: {
+    eyebrow: "ADMIN",
+    title: "Approval",
+    intro:
+      "Bands that have started setting up payments. Approve a room when it can take payments and the content looks fine.",
+    reportsLink: "Reports →",
+    goLiveLink: "Approval →",
+    none: "No bands waiting.",
+    org: "Org. no.",
+    vipps: "Vipps",
+    stripe: "Stripe",
+    plan: "Band plan",
+    yes: "Yes",
+    no: "No",
+    paid: "Paid",
+    unpaid: "Not paid",
+    msn: (msn: string) => `Sales unit ${msn}`,
+    approvedAt: (date: string) => `Approved ${date}`,
+    disabled: "Disabled",
+    approve: "Approve",
+    revoke: "Withdraw",
+    notReady: "Can't take payments yet",
+    failed: "Something went wrong.",
   },
   errors: {
     loginFirst: "Please log in first.",
