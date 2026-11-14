@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getT } from "@/lib/i18n/server";
-import { getBandByOwner, getBandBySlug, hasAccess } from "@/lib/access";
+import {
+  fanSalesBlockFor,
+  getBandByOwner,
+  getBandBySlug,
+  hasAccess,
+} from "@/lib/access";
 import { insertPendingAgreement, type AgreementKind } from "@/lib/agreements";
 import { ARTIST_PLAN_PRICE_KR } from "@/lib/pricing";
 import { appOrigin } from "@/lib/redirect";
@@ -40,6 +45,12 @@ export async function POST(request: NextRequest) {
   if (kind === "fan" && (await hasAccess(user.id, band)))
     return NextResponse.json(
       { error: (await getT()).errors.alreadyAccess },
+      { status: 409 },
+    );
+  // The band is the seller: no fan agreement unless the band can be paid.
+  if (kind === "fan" && (await fanSalesBlockFor(band, "vipps")))
+    return NextResponse.json(
+      { error: (await getT()).errors.roomNotSelling },
       { status: 409 },
     );
 

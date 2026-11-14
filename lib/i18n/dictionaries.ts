@@ -798,8 +798,7 @@ const nb = {
       locked: "Søknaden er hos Vipps, så dette kan ikke endres her.",
       missing_details: "Fullfør organisasjonsnummer og bankkonto først.",
       vipps_not_ready: "Søknader til Vipps er ikke slått på ennå.",
-      vipps_failed:
-        "Kunne ikke lage søknaden hos Vipps. Prøv igjen om litt.",
+      vipps_failed: "Kunne ikke lage søknaden hos Vipps. Prøv igjen om litt.",
     },
   },
   goLive: {
@@ -848,6 +847,8 @@ const nb = {
     chatMessageNotFound: "Fant ikke meldingen.",
     vippsStart: "Kunne ikke starte Vipps.",
     vippsRead: "Kunne ikke lese avtalen.",
+    roomNotSelling:
+      "Dette rommet tar ikke imot nye medlemmer akkurat nå. Prøv igjen senere.",
     stripeNotReady:
       "Dette bandet tar ikke imot kortbetaling ennå. Prøv igjen senere.",
     stripeStart: "Kunne ikke starte kortbetaling.",
@@ -1717,6 +1718,8 @@ const en: Dictionary = {
     chatMessageNotFound: "Message not found.",
     vippsStart: "Couldn't start Vipps.",
     vippsRead: "Couldn't read the agreement.",
+    roomNotSelling:
+      "This room isn't taking new members right now. Please try again later.",
     stripeNotReady:
       "This band can't take card payments yet. Please try again later.",
     stripeStart: "Couldn't start card payment.",

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBandByOwner, getBandBySlug, hasAccess } from "@/lib/access";
+import {
+  fanSalesBlockFor,
+  getBandByOwner,
+  getBandBySlug,
+  hasAccess,
+} from "@/lib/access";
 import type { AgreementKind } from "@/lib/agreements";
 import { getLocale, getT } from "@/lib/i18n/server";
 import { ARTIST_PLAN_PRICE_KR, PLATFORM_FEE_PERCENT } from "@/lib/pricing";
@@ -35,12 +40,15 @@ export async function POST(request: NextRequest) {
       { error: t.errors.alreadyAccess },
       { status: 409 },
     );
-  if (
-    kind === "fan" &&
-    (!band.stripe_account_id || !band.stripe_charges_enabled)
-  )
+  const block = kind === "fan" ? await fanSalesBlockFor(band, "stripe") : null;
+  if (block)
     return NextResponse.json(
-      { error: t.errors.stripeNotReady },
+      {
+        error:
+          block === "no_stripe"
+            ? t.errors.stripeNotReady
+            : t.errors.roomNotSelling,
+      },
       { status: 409 },
     );
 

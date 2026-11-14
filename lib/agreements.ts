@@ -121,3 +121,9 @@ export async function claimEvent(input: {
     .run();
   return result.meta.changes > 0;
 }
+
+/** Forgets a claimed event whose handling failed, so Vipps' retry is handled. */
+export async function releaseEvent(id: string) {
+  const { DB } = await getEnv();
+  await DB.prepare("DELETE FROM vipps_events WHERE id = ?1").bind(id).run();
+}

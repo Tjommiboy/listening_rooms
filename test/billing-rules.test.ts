@@ -7,6 +7,7 @@ import {
   bandStateFrom,
   DAY,
   dueDateFor,
+  fanSalesBlock,
   fanSubscriptionState,
   nextPaidUntil,
   osloDate,
@@ -234,5 +235,62 @@ describe("fanSubscriptionState", () => {
       ),
       "active",
     );
+  });
+});
+
+describe("fanSalesBlock", () => {
+  const ready = {
+    provider: "vipps" as const,
+    state: "active" as const,
+    disabled: false,
+    liveApproved: true,
+    hasVippsMsn: true,
+    stripeReady: true,
+    vippsProduction: true,
+  };
+
+  it("lets a fan pay a live band that has its own Vipps sales unit", () => {
+    assert.equal(fanSalesBlock(ready), null);
+  });
+
+  it("refuses a band an admin switched off, whatever else is in place", () => {
+    assert.equal(fanSalesBlock({ ...ready, disabled: true }), "disabled");
+  });
+
+  it("refuses a band whose plan isn't active", () => {
+    for (const state of ["trial", "locked", "closed"] as const)
+      assert.equal(fanSalesBlock({ ...ready, state }), "not_live");
+  });
+
+  it("refuses Vipps in production without the band's own sales unit", () => {
+    assert.equal(fanSalesBlock({ ...ready, hasVippsMsn: false }), "no_vipps");
+  });
+
+  it("refuses a band that isn't approved to go live", () => {
+    assert.equal(fanSalesBlock({ ...ready, liveApproved: false }), "not_live");
+    assert.equal(
+      fanSalesBlock({ ...ready, provider: "stripe", liveApproved: false }),
+      "not_live",
+    );
+  });
+
+  it("refuses card payment until the band's Stripe account is ready", () => {
+    assert.equal(
+      fanSalesBlock({ ...ready, provider: "stripe", stripeReady: false }),
+      "no_stripe",
+    );
+    assert.equal(fanSalesBlock({ ...ready, provider: "stripe" }), null);
+  });
+
+  it("outside Vipps production only needs an active plan (test money)", () => {
+    const test = {
+      ...ready,
+      vippsProduction: false,
+      hasVippsMsn: false,
+      liveApproved: false,
+    };
+    assert.equal(fanSalesBlock(test), null);
+    assert.equal(fanSalesBlock({ ...test, state: "trial" }), "not_live");
+    assert.equal(fanSalesBlock({ ...test, disabled: true }), "disabled");
   });
 });

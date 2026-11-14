@@ -28,6 +28,37 @@ export function bandStateFrom(
   return "closed";
 }
 
+export type FanSalesBlock = "disabled" | "not_live" | "no_vipps" | "no_stripe";
+
+/**
+ * May a new fan start paying this band through this provider? Returns why
+ * not, or null when it's fine. The band is the seller, so it must have its
+ * own way to be paid, be approved to go live, and have an active band plan.
+ *
+ * Outside Vipps production (`vippsProduction` false) a band can't get its own
+ * sales unit, so there the Vipps path only needs an active plan: it is test
+ * money on the platform's test unit.
+ */
+export function fanSalesBlock(input: {
+  provider: "vipps" | "stripe";
+  state: BandState;
+  disabled: boolean;
+  liveApproved: boolean;
+  hasVippsMsn: boolean;
+  stripeReady: boolean;
+  vippsProduction: boolean;
+}): FanSalesBlock | null {
+  if (input.disabled) return "disabled";
+  if (input.state !== "active") return "not_live";
+  if (input.provider === "stripe") {
+    if (!input.stripeReady) return "no_stripe";
+    return input.liveApproved ? null : "not_live";
+  }
+  if (!input.vippsProduction) return null;
+  if (!input.hasVippsMsn) return "no_vipps";
+  return input.liveApproved ? null : "not_live";
+}
+
 /** A date as YYYY-MM-DD in Norwegian time (what Vipps expects for `due`). */
 export function osloDate(ms: number) {
   return new Intl.DateTimeFormat("en-CA", {

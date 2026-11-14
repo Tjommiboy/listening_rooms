@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { claimEvent, markPaid, setAgreementStatus } from "@/lib/agreements";
+import {
+  claimEvent,
+  markPaid,
+  releaseEvent,
+  setAgreementStatus,
+} from "@/lib/agreements";
 import { findCharge, setChargeStatus } from "@/lib/billing";
 import { verifyWebhook } from "@/lib/vipps";
 
@@ -39,45 +44,54 @@ export async function POST(request: NextRequest) {
 
   const parsed = event.occurred ? Date.parse(event.occurred) : NaN;
   const occurredAt = Number.isFinite(parsed) ? parsed : Date.now();
+  const eventId = `${eventType}:${event.chargeId ?? agreementId}`;
   const isNew = await claimEvent({
-    id: `${eventType}:${event.chargeId ?? agreementId}`,
+    id: eventId,
     agreementId,
     eventType,
     occurredAt,
   });
   if (!isNew) return NextResponse.json({ received: true, duplicate: true });
 
-  switch (eventType) {
-    case "recurring.charge-captured.v1": {
-      // One of our monthly charges continues its period; the first charge
-      // (made when the fan approved) isn't in our table.
-      const charge = event.chargeId ? await findCharge(event.chargeId) : null;
-      if (charge) await setChargeStatus(event.chargeId!, "CAPTURED");
-      await markPaid(agreementId, occurredAt, charge?.period_start);
-      break;
+  try {
+    switch (eventType) {
+      case "recurring.charge-captured.v1": {
+        // One of our monthly charges continues its period; the first charge
+        // (made when the fan approved) isn't in our table.
+        const charge = event.chargeId ? await findCharge(event.chargeId) : null;
+        if (charge) await setChargeStatus(event.chargeId!, "CAPTURED");
+        await markPaid(agreementId, occurredAt, charge?.period_start);
+        break;
+      }
+      case "recurring.agreement-activated.v1":
+        await setAgreementStatus(agreementId, "ACTIVE");
+        break;
+      case "recurring.agreement-stopped.v1":
+        // Access continues until paid_until; no refund of the current month.
+        await setAgreementStatus(agreementId, "STOPPED");
+        break;
+      case "recurring.agreement-expired.v1":
+      case "recurring.agreement-rejected.v1":
+        await setAgreementStatus(agreementId, "EXPIRED");
+        break;
+      case "recurring.charge-failed.v1":
+      case "recurring.charge-creation-failed.v1":
+        // Vipps has given up after its retries. Nothing else to change: access
+        // lapses by itself when paid_until passes (fans) or the grace runs out
+        // (bands), and comes back if a later charge succeeds.
+        if (event.chargeId) await setChargeStatus(event.chargeId, "FAILED");
+        console.warn("Vipps charge failed", agreementId, event.chargeId);
+        break;
+      case "recurring.charge-canceled.v1":
+        if (event.chargeId) await setChargeStatus(event.chargeId, "CANCELLED");
+        break;
     }
-    case "recurring.agreement-activated.v1":
-      await setAgreementStatus(agreementId, "ACTIVE");
-      break;
-    case "recurring.agreement-stopped.v1":
-      // Access continues until paid_until; no refund of the current month.
-      await setAgreementStatus(agreementId, "STOPPED");
-      break;
-    case "recurring.agreement-expired.v1":
-    case "recurring.agreement-rejected.v1":
-      await setAgreementStatus(agreementId, "EXPIRED");
-      break;
-    case "recurring.charge-failed.v1":
-    case "recurring.charge-creation-failed.v1":
-      // Vipps has given up after its retries. Nothing else to change: access
-      // lapses by itself when paid_until passes (fans) or the grace runs out
-      // (bands), and comes back if a later charge succeeds.
-      if (event.chargeId) await setChargeStatus(event.chargeId, "FAILED");
-      console.warn("Vipps charge failed", agreementId, event.chargeId);
-      break;
-    case "recurring.charge-canceled.v1":
-      if (event.chargeId) await setChargeStatus(event.chargeId, "CANCELLED");
-      break;
+  } catch (error) {
+    // Let Vipps retry later: without this the retry would be dropped as a
+    // duplicate and a captured payment would never open access.
+    await releaseEvent(eventId).catch(() => {});
+    console.error("Vipps webhook failed", eventType, agreementId, error);
+    return NextResponse.json({ error: "Failed." }, { status: 500 });
   }
   return NextResponse.json({ received: true });
 }

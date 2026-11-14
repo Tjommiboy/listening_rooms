@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/cf";
 import { BAND_GRACE_DAYS, getBandState } from "@/lib/billing";
+import { fanSalesBlock, type FanSalesBlock } from "@/lib/billing-rules";
 import { demoBandPlanEnabled } from "@/lib/demo";
 
 /** A band's plan keeps working this long after a failed renewal. */
@@ -16,12 +17,16 @@ export type Band = {
   stripe_charges_enabled: number;
   /** Set when a platform admin switched the band off. */
   disabled_at?: number | null;
+  /** The band's own Vipps sales unit, once Vipps has approved it. */
+  vipps_msn?: string | null;
+  /** Set when a platform admin approved the band to go live. */
+  live_approved_at?: number | null;
 };
 
 export async function getBandBySlug(slug: string) {
   const { DB } = await getEnv();
   return DB.prepare(
-    "SELECT id, slug, name, owner_id, member_price_kr, bucket_name, stripe_account_id, stripe_charges_enabled, disabled_at FROM bands WHERE slug = ?1",
+    "SELECT id, slug, name, owner_id, member_price_kr, bucket_name, stripe_account_id, stripe_charges_enabled, disabled_at, vipps_msn, live_approved_at FROM bands WHERE slug = ?1",
   )
     .bind(slug)
     .first<Band>();
@@ -30,7 +35,7 @@ export async function getBandBySlug(slug: string) {
 export async function getBandByOwner(userId: string) {
   const { DB } = await getEnv();
   return DB.prepare(
-    "SELECT id, slug, name, owner_id, member_price_kr, bucket_name, stripe_account_id, stripe_charges_enabled, disabled_at FROM bands WHERE owner_id = ?1",
+    "SELECT id, slug, name, owner_id, member_price_kr, bucket_name, stripe_account_id, stripe_charges_enabled, disabled_at, vipps_msn, live_approved_at FROM bands WHERE owner_id = ?1",
   )
     .bind(userId)
     .first<Band>();
@@ -59,6 +64,25 @@ export async function hasAccess(userId: string | undefined, band: Band) {
     .first();
   if (row === null) return false;
   return (await getBandState(band.id)) !== "closed";
+}
+
+/**
+ * Why this band can't take a new fan payment through this provider, or null
+ * when it can. Checked before a Vipps agreement or Stripe Checkout is started.
+ */
+export async function fanSalesBlockFor(
+  band: Band,
+  provider: "vipps" | "stripe",
+): Promise<FanSalesBlock | null> {
+  return fanSalesBlock({
+    provider,
+    state: await getBandState(band.id),
+    disabled: Boolean(band.disabled_at),
+    liveApproved: Boolean(band.live_approved_at),
+    hasVippsMsn: Boolean(band.vipps_msn),
+    stripeReady: Boolean(band.stripe_account_id && band.stripe_charges_enabled),
+    vippsProduction: process.env.VIPPS_ENV === "production",
+  });
 }
 
 /** Whether the band's 49 kr plan is paid, so it may upload. */
